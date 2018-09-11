@@ -7,34 +7,61 @@ ui <- dashboardPage(
   
   dashboardSidebar(
     sidebarMenu(
-      menuItem("New calibration", tabName = "new_cal")
+      menuItem("New calibration", startExpanded = TRUE,
+        menuSubItem("From XML", tabName = "new_cal_xml"),
+        menuSubItem("Manual", tabName = "new_cal_manual")
+      )
     )
   ),
   
   dashboardBody(
     
-    tabItem(tabName = "new_cal",
-      tabBox(
-        tabPanel("From XML",
+    tabItems(
+      
+      tabItem(tabName = "new_cal_xml",
+        box(
           fluidRow(
-            
+              
             column(4,
-                   
-                   fileInput("xml_file", label = "SVMAQ XML file"),
-                   actionButton("write_db", "Record file")
-                   
+                     
+              fileInput("xml_file", label = "SVMAQ XML file"),
+              actionButton("write_db", "Record file")
+                     
             ),
             column(6,
-                   textOutput("xml_check_text"),
-                   tableOutput("xml_sensor_table")
-                   
+              textOutput("xml_check_text"),
+              tableOutput("xml_sensor_table")
+                     
             )
           )
-        ),
-        tabPanel("Manual entry")
+        )
+      ),
+      
+      tabItem(tabName = "new_cal_manual",
+        tabBox(
+          tabPanel("Specific cond at 25C",
+                
+            textInput("sc_sensor_sn", "Sensor serial number", placeholder = "12A34567"),
+            fluidRow(
+              column(2,
+                textInput("sc_cell_constant", "Cell constant")    
+              ),
+              column(2,
+                textInput("sc_air_reading", "Reading in air")
+              )
+            ),
+            textInput("sc_comment", "Comment", width = "65%"),
+            
+            uiOutput("sc_reading_ui")
+            
+            
+          ),
+          tabPanel("Turbidity, FNU"),
+          tabPanel("Dissolved oxygen"),
+          tabPanel("pH")
+        )       
       )
     )
-    
   )
 )
 
@@ -118,6 +145,15 @@ server <- function(input, output) {
       
     }
     
+    
+  })
+  
+  output$sc_reading_ui <- renderUI({
+    
+    tabsetPanel(
+      tabPanel("Check/Pre-calibration"),
+      tabPanel("Post-calibration")
+    )
     
   })
   
