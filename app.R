@@ -1,6 +1,7 @@
 library(shiny)
 library(shinydashboard)
 source("tools.R")
+source("modules.R")
 
 ui <- dashboardPage(
   dashboardHeader(title = "Calibration Logbook"),
@@ -40,32 +41,19 @@ ui <- dashboardPage(
       tabItem(tabName = "new_cal_manual",
         tabBox(
           tabPanel("Specific cond at 25C",
-                
-            textInput("sc_sensor_sn", "Sensor serial number", placeholder = "12A34567"),
-            fluidRow(
-              column(2,
-                textInput("sc_cell_constant", "Cell constant")    
-              ),
-              column(2,
-                textInput("sc_air_reading", "Reading in air")
-              )
-            ),
-            textInput("sc_comment", "Comment", width = "65%"),
-            
-            uiOutput("sc_reading_ui")
-            
-            
+            manualScInput("sc_check1"),
+            verbatimTextOutput("sc_out")
           ),
           tabPanel("Turbidity, FNU"),
           tabPanel("Dissolved oxygen"),
-          tabPanel("pH")
-        )       
+          tabPanel("pH"),
+        width = NULL)       
       )
     )
   )
 )
 
-server <- function(input, output) { 
+server <- function(input, output, session) { 
   
   dbcon <- cal_book_connect("cal_db.db")
   
@@ -148,12 +136,11 @@ server <- function(input, output) {
     
   })
   
-  output$sc_reading_ui <- renderUI({
+  sc_check <- callModule(manualSc, "sc_check1")
+  
+  output$sc_out <- renderPrint({
     
-    tabsetPanel(
-      tabPanel("Check/Pre-calibration"),
-      tabPanel("Post-calibration")
-    )
+    print(sc_check())
     
   })
   
