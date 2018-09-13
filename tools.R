@@ -691,3 +691,13 @@ delete_everything <- function(dbcon) {
   
 }
 
+empty_if_null <- function(x) {
+  
+  if(is.null(x)) {
+    x <- ""
+  }
+  
+  return(x)
+  
+}
+
