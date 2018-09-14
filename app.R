@@ -44,7 +44,10 @@ ui <- dashboardPage(
             manualScInput("sc_check1"),
             verbatimTextOutput("sc_out")
           ),
-          tabPanel("Turbidity, FNU"),
+          tabPanel("Turbidity, FNU",
+            manualTbyInput("tby_check1"),
+            verbatimTextOutput("tby_out")
+          ),
           tabPanel("Dissolved oxygen"),
           tabPanel("pH"),
         width = NULL)       
@@ -137,10 +140,17 @@ server <- function(input, output, session) {
   })
   
   sc_check <- callModule(manualSc, "sc_check1")
+  tby_check <- callModule(manualTby, "tby_check1")
   
   output$sc_out <- renderPrint({
     
     print(sc_check())
+    
+  })
+  
+  output$tby_out <- renderPrint({
+    
+    print(tby_check())
     
   })
   
