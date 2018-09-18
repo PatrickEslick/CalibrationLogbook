@@ -21,8 +21,9 @@ ui <- dashboardPage(
       
       tabItem(tabName = "new_cal_xml",
         box(
+          h2("Upload an XML file from SVMAQ"),
           fluidRow(
-              
+                
             column(4,
                      
               fileInput("xml_file", label = "SVMAQ XML file"),
