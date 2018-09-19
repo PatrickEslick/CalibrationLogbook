@@ -471,4 +471,162 @@ return(do_check_list)
   
 }
 
+##########################################################################################################################################################
+#
+# pH
+# Module for getting pH calibration data
+#
+##########################################################################################################################################################
+
+manualPhInput <- function(id) {
+  
+  ns <- NS(id)
+  
+  tagList(
+    textInput(ns("ph_sensor_sn"), "Sensor serial number", placeholder = "12A34567"),
+    textInput(ns("ph_comment"), "Comment", width = "65%"),
+    tabsetPanel(
+      tabPanel("Calibration",
+               sliderInput(ns("reading_count_before"), label = "Number of readings", min = 1, max = 5, value = 1, step = 1),
+               uiOutput(ns("ph_reading_before_ui"))
+      ),
+      tabPanel("Post-calibration",
+               sliderInput(ns("reading_count_after"), label = "Number of readings", min = 1, max = 5, value = 1, step = 1),
+               uiOutput(ns("ph_reading_after_ui"))
+      )
+    )
+  )
+  
+}
+
+manualPh <- function(input, output, session) {
+  
+  output$ph_reading_before_ui <- renderUI({
+    
+    ns <- session$ns
+    
+    lapply(1:input$reading_count_before, function(i) {
+      fluidRow(
+        column(1, textInput(ns(paste0("b_std_uncorrected", i)), label = "Std. value, uncorrected")),
+        column(1, textInput(ns(paste0("b_std_expiration", i)), label = "Std. expiration",
+                            placeholder = "yyyy-mm-dd")),
+        column(1, selectInput(ns(paste0("b_std_type", i)), label = "Std. type",
+                              choices = c("RICCA", "Other"))),
+        column(1, textInput(ns(paste0("b_std_lot", i)), label = "Std. lot")),
+        column(1, textInput(ns(paste0("b_temperature", i)), label = "Temperature")),
+        column(1, textInput(ns(paste0("b_std_value", i)), label = "Std. value")),
+        column(1, textInput(ns(paste0("b_reading", i)), label = "Reading")),
+        column(1, textInput(ns(paste0("b_millivolts", i)), label = "Millivolts")),
+        column(1, textInput(ns(paste0("b_datetime", i)), label = "Datetime",
+                            value = as.character(Sys.time(), format="%Y-%m-%d %H:%M")))
+      )
+    })
+  })
+  
+  output$ph_reading_after_ui <- renderUI({
+    
+    ns <- session$ns
+    
+    lapply(1:input$reading_count_after, function(i) {
+      fluidRow(
+        column(1, textInput(ns(paste0("a_std_uncorrected", i)), label = "Std. value, uncorrected")),
+        column(1, textInput(ns(paste0("a_std_expiration", i)), label = "Std. expiration",
+                            placeholder = "yyyy-mm-dd")),
+        column(1, selectInput(ns(paste0("a_std_type", i)), label = "Std. type",
+                              choices = c("RICCA", "Other"))),
+        column(1, textInput(ns(paste0("a_std_lot", i)), label = "Std. lot")),
+        column(1, textInput(ns(paste0("a_temperature", i)), label = "Temperature")),
+        column(1, textInput(ns(paste0("a_std_value", i)), label = "Std. value")),
+        column(1, textInput(ns(paste0("a_reading", i)), label = "Reading")),
+        column(1, textInput(ns(paste0("a_millivolts", i)), label = "Millivolts")),
+        column(1, textInput(ns(paste0("a_datetime", i)), label = "Datetime",
+                            value = as.character(Sys.time(), format="%Y-%m-%d %H:%M")))
+      )
+    })
+    
+  })
+  
+  ph_check_list <- reactive({
+    
+    
+    if(!is.null(input$ph_sensor_sn)) {
+      
+      #Get data for tby_CHECK table
+      
+      SENSOR_ID <- input$ph_sensor_sn
+      COMMENT <- empty_if_null(input$ph_comment)
+      
+      ph_check_df <- data.frame(SENSOR_ID, COMMENT, 
+                                stringsAsFactors = FALSE)
+      
+    } else {
+      
+      ph_check_df <- data.frame(SENSOR_ID = vector(), COMMENT = vector())
+      
+    }
+    
+    #Get data for tby_READING table
+    
+    STD_UNCORRECTED <- vector()
+    STD_EXPIRATION <- vector()
+    STD_TYPE <- vector()
+    STD_LOT <- vector()
+    TEMPERATURE <- vector()
+    STD_VALUE <- vector()
+    READING <- vector()
+    DATETIME <- vector()
+    MILLIVOLTS <- vector()
+    TYPE <- vector()
+    
+    # Get the before data
+    for(i in 1:input$reading_count_before) {
+      
+      if(!is.null(input[[paste0("b_std_value", i)]])) {
+        if(input[[paste0("b_std_value", i)]] != "") {
+          STD_UNCORRECTED[length(STD_UNCORRECTED) + 1] <- input[[paste0("b_std_uncorrected", i)]]
+          STD_EXPIRATION[length(STD_EXPIRATION) + 1] <- empty_if_null(input[[paste0("b_std_expiration", i)]])
+          STD_TYPE[length(STD_TYPE) + 1] <- empty_if_null(input[[paste0("b_std_type", i)]])
+          STD_LOT[length(STD_LOT) + 1] <- empty_if_null(input[[paste0("b_std_lot", i)]])
+          TEMPERATURE[length(TEMPERATURE) + 1] <- empty_if_null(input[[paste0("b_temperature", i)]])
+          STD_VALUE[length(STD_VALUE) + 1] <- input[[paste0("b_std_value", i)]]
+          READING[length(READING) + 1] <- empty_if_null(input[[paste0("b_reading", i)]])
+          DATETIME[length(DATETIME) + 1] <- empty_if_null(input[[paste0("b_datetime", i)]])
+          MILLIVOLTS[length(MILLIVOLTS) + 1] <- empty_if_null(input[[paste0("b_millivolts", i)]])
+          TYPE[length(TYPE) + 1] <- "CALI"
+        }
+      }
+      
+    }
+    
+    #Get the after data
+    for(i in 1:input$reading_count_after) {
+      
+      if(!is.null(input[[paste0("a_std_value", i)]])) {
+        if(input[[paste0("a_std_value", i)]] != "") {
+          STD_UNCORRECTED[length(STD_UNCORRECTED) + 1] <- input[[paste0("a_std_uncorrected", i)]]
+          STD_EXPIRATION[length(STD_EXPIRATION) + 1] <- empty_if_null(input[[paste0("a_std_expiration", i)]])
+          STD_TYPE[length(STD_TYPE) + 1] <- empty_if_null(input[[paste0("a_std_type", i)]])
+          STD_LOT[length(STD_LOT) + 1] <- empty_if_null(input[[paste0("a_std_lot", i)]])
+          TEMPERATURE[length(TEMPERATURE) + 1] <- empty_if_null(input[[paste0("a_temperature", i)]])
+          STD_VALUE[length(STD_VALUE) + 1] <- input[[paste0("a_std_value", i)]]
+          READING[length(READING) + 1] <- empty_if_null(input[[paste0("a_reading", i)]])
+          DATETIME[length(DATETIME) + 1] <- empty_if_null(input[[paste0("a_datetime", i)]])
+          MILLIVOLTS[length(MILLIVOLTS) + 1] <- empty_if_null(input[[paste0("a_millivolts", i)]])
+          TYPE[length(TYPE) + 1] <- "RECL"
+        }
+      }
+      
+    }
+    
+    ph_reading_df <- data.frame(STD_UNCORRECTED, STD_EXPIRATION, STD_TYPE, STD_LOT, TEMPERATURE, STD_VALUE, READING,
+                                DATETIME, MILLIVOLTS, TYPE)
+    
+    list_out <- list(PH_CHECK = ph_check_df, PH_READING = ph_reading_df)
+    
+  })
+  
+  return(ph_check_list)
+  
+}
+
 
