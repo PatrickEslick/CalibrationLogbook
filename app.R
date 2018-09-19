@@ -49,7 +49,14 @@ ui <- dashboardPage(
             manualTbyInput("tby_check1"),
             verbatimTextOutput("tby_out")
           ),
-          tabPanel("Dissolved oxygen"),
+          tabPanel("Dissolved oxygen",
+            manualDoInput("do_check1"),
+            fluidRow(
+              column(12,
+                verbatimTextOutput("do_out")
+              )
+            )
+          ),
           tabPanel("pH"),
         width = NULL)       
       )
@@ -142,6 +149,7 @@ server <- function(input, output, session) {
   
   sc_check <- callModule(manualSc, "sc_check1")
   tby_check <- callModule(manualTby, "tby_check1")
+  do_check <- callModule(manualDo, "do_check1")
   
   output$sc_out <- renderPrint({
     
@@ -152,6 +160,12 @@ server <- function(input, output, session) {
   output$tby_out <- renderPrint({
     
     print(tby_check())
+    
+  })
+  
+  output$do_out <- renderPrint({
+    
+    print(do_check())
     
   })
   

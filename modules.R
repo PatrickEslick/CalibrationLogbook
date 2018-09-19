@@ -1,3 +1,11 @@
+##########################################################################################################################################################
+#
+# SC
+# Module for getting specific conductance calibration data
+#
+##########################################################################################################################################################
+
+
 manualScInput <- function(id) {
   
   ns <- NS(id)
@@ -75,7 +83,7 @@ manualSc <- function(input, output, session) {
     
     
     if(!is.null(input$sc_sensor_sn)) {
-    
+      
       #Get data for SC_CHECK table
       
       SENSOR_ID <- input$sc_sensor_sn
@@ -85,7 +93,7 @@ manualSc <- function(input, output, session) {
       
       sc_check_df <- data.frame(SENSOR_ID, CELL_CONSTANT, AIR_READING, COMMENT,
                                 stringsAsFactors = FALSE)
-    
+      
     } else {
       
       sc_check_df <- data.frame(SENSOR_ID = vector(), CELL_CONSTANT = vector(),
@@ -151,6 +159,13 @@ manualSc <- function(input, output, session) {
   
 }
 
+##########################################################################################################################################################
+#
+# TBY
+# Module for getting turbidity calibration data
+#
+##########################################################################################################################################################
+
 manualTbyInput <- function(id) {
   
   ns <- NS(id)
@@ -204,7 +219,18 @@ manualTby <- function(input, output, session) {
     ns <- session$ns
     
     lapply(1:input$reading_count_after, function(i) {
-
+      fluidRow(
+        column(1, textInput(ns(paste0("a_std_value", i)), label = "Std. value")),
+        column(1, textInput(ns(paste0("a_std_expiration", i)), label = "Std. expiration",
+                            placeholder = "yyyy-mm-dd")),
+        column(1, selectInput(ns(paste0("a_std_type", i)), label = "Std. type",
+                              choices = c("Stablcal", "Formazin", "DI water"))),
+        column(1, textInput(ns(paste0("a_std_lot", i)), label = "Std. lot")),
+        column(1, textInput(ns(paste0("a_reading", i)), label = "Reading")),
+        column(1, textInput(ns(paste0("a_temperature", i)), label = "Temperature")),
+        column(1, textInput(ns(paste0("a_datetime", i)), label = "Date/Time",
+                            value = as.character(Sys.time(), format="%Y-%m-%d %H:%M")))
+      )
     })
     
   })
@@ -289,3 +315,160 @@ manualTby <- function(input, output, session) {
   return(tby_check_list)
   
 }
+
+##########################################################################################################################################################
+#
+# DO
+# Module for getting dissolved oxygen calibration data
+#
+##########################################################################################################################################################
+
+
+manualDoInput <- function(id) {
+  
+  ns <- NS(id)
+  
+  tagList(
+    textInput(ns("do_sensor_sn"), "Sensor serial number", placeholder = "12A34567"),
+    fluidRow(
+      column(3,
+        textInput(ns("do_sc_air_saturated_water"), "SC of air saturated water")
+      ),
+      column(3,
+        textInput(ns("do_temp_air_saturated_water"), "Temperature of air saturated water")       
+      ),
+      column(3,
+        textInput(ns("do_salinity"), "Salinity")       
+      )
+    ),
+    fluidRow(
+      column(2,
+        textInput(ns("do_odo_gain_pre"), "ODO gain")
+      ),
+      column(2,
+        textInput(ns("do_odo_gain_post"), "Post-calibration ODO gain")       
+      ),
+      column(2,
+        checkboxInput(ns("do_odo_cap_changed"), "ODO cap changed")       
+      ),
+      column(2,
+        textInput(ns("do_odo_cap_sn"), "ODO cap serial")       
+      )
+    ),
+    textInput(ns("do_date_barometer_calibrated"), "Date barometer calibrated"),
+    textInput(ns("do_comment"), "Comment", width = "65%"),
+    tabsetPanel(
+      tabPanel("Calibration",
+        column(1, textInput(ns("b_temperature"), "Temperature (C)")),
+        column(1, textInput(ns("b_pressure"), "Pressure (mmHg)")),
+        column(1, textInput(ns("b_salinity_correction"), "Salinity corection", value = "1")),
+        column(1, textInput(ns("b_do_table_value"), "DO table value")),
+        column(1, textInput(ns("b_reading"), "Reading")),
+        column(1, textInput(ns("b_datetime"), "Datetime",
+                            value = as.character(Sys.time(), format="%Y-%m-%d %H:%M"))),
+        column(1, textInput(ns("b_zero_reading"), "Reading in zero soln."))
+      ),
+      tabPanel("Post-calibration",
+        column(1, textInput(ns("a_temperature"), "Temperature (C)")),
+        column(1, textInput(ns("a_pressure"), "Pressure (mmHg)")),
+        column(1, textInput(ns("a_salinity_correction"), "Salinity corection", value = "1")),
+        column(1, textInput(ns("a_do_table_value"), "DO table value")),
+        column(1, textInput(ns("a_reading"), "Reading")),
+        column(1, textInput(ns("a_datetime"), "Datetime",
+                           value = as.character(Sys.time(), format="%Y-%m-%d %H:%M"))),
+        column(1, textInput(ns("a_zero_reading"), "Reading in zero soln."))        
+      )
+    )
+  )
+  
+}
+
+manualDo <- function(input, output, session) {
+  
+  do_check_list <- reactive({
+  
+    if(!is.null(input$do_sensor_sn)) {
+      
+      #Get data for do_CHECK table
+      
+      SENSOR_ID <- input$do_sensor_sn
+      SC_AIR_SATURATED_WATER <- input$do_sc_air_saturated_water
+      TEMP_AIR_SATURATED_WATER <- input$do_temp_air_saturated_water
+      SALINITY <- input$do_salinity
+      DATE_BAROMETER_CALIBRATED <- input$do_date_barometer_calibrated
+      ODO_GAIN_PRE <- input$do_odo_gain_pre
+      ODO_CAP_CHANGED <- input$do_odo_cap_changed
+      ODO_CAP_SN <- input$do_odo_cap_sn
+      ODO_GAIN_POST <- input$do_odo_gain_post
+      COMMENT <- input$do_comment
+      
+      do_check_df <- data.frame(SENSOR_ID, SC_AIR_SATURATED_WATER, TEMP_AIR_SATURATED_WATER, SALINITY,
+                                DATE_BAROMETER_CALIBRATED, ODO_GAIN_PRE, ODO_CAP_CHANGED, ODO_CAP_SN,
+                                ODO_GAIN_POST, COMMENT,
+                                stringsAsFactors = FALSE)
+      
+    } else {
+      
+      do_check_df <- data.frame(SENSOR_ID = vector(), SC_AIR_SATURATED_WATER = vector(),
+                                TEMP_AIR_SATURATED_WATER = vector(), SALINITY = vector(),
+                                DATE_BAROMETER_CALIBRATED = vector(), ODO_GAIN_PRE = vector(),
+                                ODO_CAP_CHANGED = vector(), ODO_CAP_SN = vector(),
+                                ODO_GAIN_POST = vector(), COMMENT = vector())
+      
+    }
+    
+    #Get data for do_READING table
+    
+    TEMPERATURE <- vector()
+    PRESSURE <- vector()
+    SALINITY_CORRECTION <- vector()
+    DO_TABLE_VALUE <- vector()
+    READING <- vector()
+    DATETIME <- vector()
+    ZERO_READING <- vector()
+    TYPE <- vector()
+    
+    # Get the before data
+      
+    if(!is.null(input$b_do_table_value)) {
+      if(input$b_do_table_value != "") {
+        TEMPERATURE[length(TEMPERATURE) + 1] <- input$b_temperature
+        PRESSURE[length(PRESSURE) + 1] <- input$b_pressure
+        SALINITY_CORRECTION[length(SALINITY_CORRECTION) + 1] <- input$b_salinity_correction
+        DO_TABLE_VALUE[length(DO_TABLE_VALUE) + 1] <- input$b_do_table_value
+        READING[length(READING) + 1] <- input$b_reading
+        DATETIME[length(DATETIME) + 1] <- input$b_datetime
+        ZERO_READING[length(ZERO_READING) + 1] <- input$b_zero_reading
+        TYPE[length(TYPE) + 1] <- "CALI"
+      }
+    }
+    
+    
+    #Get the after data
+    
+    if(!is.null(input$a_do_table_value)) {
+      if(input$a_do_table_value != "") {
+        TEMPERATURE[length(TEMPERATURE) + 1] <- input$a_temperature
+        PRESSURE[length(PRESSURE) + 1] <- input$a_pressure
+        SALINITY_CORRECTION[length(SALINITY_CORRECTION) + 1] <- input$a_salinity_correction
+        DO_TABLE_VALUE[length(DO_TABLE_VALUE) + 1] <- input$a_do_table_value
+        READING[length(READING) + 1] <- input$a_reading
+        DATETIME[length(DATETIME) + 1] <- input$a_datetime
+        ZERO_READING[length(ZERO_READING) + 1] <- input$a_zero_reading
+        TYPE[length(TYPE) + 1] <- "RECL"
+      }
+    }
+    
+    
+    do_reading_df <- data.frame(TEMPERATURE, PRESSURE, SALINITY_CORRECTION, DO_TABLE_VALUE, READING, DATETIME, 
+                                ZERO_READING, TYPE)
+    
+    list_out <- list(DO_CHECK = do_check_df, DO_READING = do_reading_df)
+  
+  })
+
+return(do_check_list)
+  
+}
+
+
