@@ -370,8 +370,9 @@ add_keys <- function(all_sv_data, max_keys, source_file) {
   
   source <- data.frame(SOURCE_ID = 1 + max_keys["SOURCE_ID"], SOURCE_NAME = basename(source_file),
                      DATE_LOADED = as.character(Sys.time(), format="%Y-%m-%d %H:%M:%S"))
-  
   all_sv_data[["SOURCE"]] <- source
+  
+  
   
   #Find the date of the first reading
   reading_dates <- c(all_sv_data[["SC_READING"]]$DATETIME, all_sv_data[["TBY_READING"]]$DATETIME,
@@ -402,7 +403,14 @@ add_keys <- function(all_sv_data, max_keys, source_file) {
       
     } 
     
-  } 
+  } else {
+    
+    all_sv_data[["SC_CHECK"]]$SC_ID <- vector()
+    all_sv_data[["SC_CHECK"]]$CAL_ID <- vector()
+    all_sv_data[["SC_READING"]]$SC_ID <- vector()
+    all_sv_data[["SC_READING"]]$SCR_ID <- vector()
+    
+  }
   
   if(nrow(all_sv_data[["TBY_CHECK"]]) > 0) {
     
@@ -416,6 +424,13 @@ add_keys <- function(all_sv_data, max_keys, source_file) {
       all_sv_data[["TBY_READING"]]$TBYR_ID <- all_sv_data[["TBY_READING"]]$TBYR_ID + max_keys["TBYR_ID"]
       
     }
+    
+  } else {
+    
+    all_sv_data[["TBY_CHECK"]]$TBY_ID <- vector()
+    all_sv_data[["TBY_CHECK"]]$CAL_ID <- vector()
+    all_sv_data[["TBY_READING"]]$TBY_ID <- vector()
+    all_sv_data[["TBY_READING"]]$TBYR_ID <- vector()
     
   }
   
@@ -432,6 +447,13 @@ add_keys <- function(all_sv_data, max_keys, source_file) {
       
     }
     
+  } else {
+    
+    all_sv_data[["DO_CHECK"]]$DO_ID <- vector()
+    all_sv_data[["DO_CHECK"]]$CAL_ID <- vector()
+    all_sv_data[["DO_READING"]]$DO_ID <- vector()
+    all_sv_data[["DO_READING"]]$DOR_ID <- vector()
+    
   }
   
   if(nrow(all_sv_data[["PH_CHECK"]]) > 0) {
@@ -446,6 +468,13 @@ add_keys <- function(all_sv_data, max_keys, source_file) {
       all_sv_data[["PH_READING"]]$PHR_ID <- all_sv_data[["PH_READING"]]$PHR_ID + max_keys["PHR_ID"]
       
     }
+    
+  } else {
+    
+    all_sv_data[["PH_CHECK"]]$PH_ID <- vector()
+    all_sv_data[["PH_CHECK"]]$CAL_ID <- vector()
+    all_sv_data[["PH_READING"]]$PH_ID <- vector()
+    all_sv_data[["PH_READING"]]$PHR_ID <- vector()
     
   }
   
@@ -555,6 +584,7 @@ get_max_keys <- function(dbcon) {
 lookup_sensors <- function(all_sv_data, dbcon) {
   
   sv_sensors <- all_sv_data[["SENSOR"]]
+  
   db_sensors <- tbl(dbcon, "SENSOR") %>%
     select(SENSOR_ID, SENSOR_SN, PARAMETER) %>%
     data.frame()
@@ -575,7 +605,7 @@ lookup_sensors <- function(all_sv_data, dbcon) {
   
   all_sv_data[["SENSOR"]] <- select(sensors, SENSOR_ID, SENSOR_SN, PARAMETER, MANUFACTURER, MODEL, new)
   
-  if(length(all_sv_data[["SC_CHECK"]]) > 0) {
+  if(nrow(all_sv_data[["SC_CHECK"]]) > 0) {
     
     sc_sensor_sn <- all_sv_data[["SC_CHECK"]]$SENSOR_ID
     sc_sensor_id <- sensors %>%
@@ -585,7 +615,7 @@ lookup_sensors <- function(all_sv_data, dbcon) {
     
   }
   
-  if(length(all_sv_data[["TBY_CHECK"]]) > 0) {
+  if(nrow(all_sv_data[["TBY_CHECK"]]) > 0) {
     
     tby_sensor_sn <- all_sv_data[["TBY_CHECK"]]$SENSOR_ID
     tby_sensor_id <- sensors %>%
@@ -595,7 +625,7 @@ lookup_sensors <- function(all_sv_data, dbcon) {
     
   }
   
-  if(length(all_sv_data[["DO_CHECK"]]) > 0) {
+  if(nrow(all_sv_data[["DO_CHECK"]]) > 0) {
     
     do_sensor_sn <- all_sv_data[["DO_CHECK"]]$SENSOR_ID
     do_sensor_id <- sensors %>%
@@ -605,7 +635,7 @@ lookup_sensors <- function(all_sv_data, dbcon) {
     
   }
   
-  if(length(all_sv_data[["PH_CHECK"]]) > 0) {
+  if(nrow(all_sv_data[["PH_CHECK"]]) > 0) {
     
     ph_sensor_sn <- all_sv_data[["PH_CHECK"]]$SENSOR_ID
     ph_sensor_id <- sensors %>%
@@ -621,6 +651,8 @@ lookup_sensors <- function(all_sv_data, dbcon) {
 
 write_sv_data <- function(all_sv_data, dbcon) {
   
+  print("writing")
+  print(all_sv_data)
   write <- list()
   
   write[["SENSOR"]] <- all_sv_data[["SENSOR"]] %>%
@@ -675,6 +707,61 @@ write_sv_data <- function(all_sv_data, dbcon) {
     }
     
   }
+  
+}
+
+combine_manual <- function(sc_list, tby_list, do_list, ph_list) {
+  
+  #Make a sensor data frame
+  sc_check <- sc_list[["SC_CHECK"]]
+  tby_check <- tby_list[["TBY_CHECK"]]
+  do_check <- do_list[["DO_CHECK"]]
+  ph_check <- ph_list[["PH_CHECK"]]
+  
+  SENSOR_SN <- vector()
+  PARAMETER <- vector()
+  MANUFACTURER <- vector()
+  MODEL <- vector()
+  if(nrow(sc_check) != 0) {
+    SENSOR_SN[length(SENSOR_SN) + 1] <- sc_check$SENSOR_ID
+    PARAMETER[length(PARAMETER) + 1] <- "Specific cond at 25C"
+    MANUFACTURER[length(MANUFACTURER) + 1] <- ""
+    MODEL[length(MODEL) + 1] <- ""
+  }
+  if(nrow(tby_check) != 0) {
+    SENSOR_SN[length(SENSOR_SN) + 1] <- tby_check$SENSOR_ID
+    PARAMETER[length(PARAMETER) + 1] <- "Turbidity, FNU"
+    MANUFACTURER[length(MANUFACTURER) + 1] <- ""
+    MODEL[length(MODEL) + 1] <- ""
+  }
+  if(nrow(ph_check) != 0) {
+    SENSOR_SN[length(SENSOR_SN) + 1] <- ph_check$SENSOR_ID
+    PARAMETER[length(PARAMETER) + 1] <- "pH"
+    MANUFACTURER[length(MANUFACTURER) + 1] <- ""
+    MODEL[length(MODEL) + 1] <- ""
+  }
+  if(nrow(do_check) != 0) {
+    SENSOR_SN[length(SENSOR_SN) + 1] <- do_check$SENSOR_ID
+    PARAMETER[length(PARAMETER) + 1] <- "Dissolved oxygen"
+    MANUFACTURER[length(MANUFACTURER) + 1] <- ""
+    MODEL[length(MODEL) + 1] <- ""
+  }
+  sensor_df <- data.frame(SENSOR_SN, PARAMETER, MANUFACTURER, MODEL)
+  
+  all_sv_data <- list()
+  all_sv_data[["SENSOR"]] <- sensor_df
+  all_sv_data[["SC_CHECK"]] <- sc_list[["SC_CHECK"]]
+  all_sv_data[["SC_READING"]] <- sc_list[["SC_READING"]]
+  all_sv_data[["TBY_CHECK"]] <- tby_list[["TBY_CHECK"]]
+  all_sv_data[["TBY_READING"]] <- tby_list[["TBY_READING"]]
+  all_sv_data[["PH_CHECK"]] <- ph_list[["PH_CHECK"]]
+  all_sv_data[["PH_READING"]] <- ph_list[["PH_READING"]]
+  all_sv_data[["DO_CHECK"]] <- do_list[["DO_CHECK"]]
+  all_sv_data[["DO_READING"]] <- do_list[["DO_READING"]]
+  all_sv_data[["CAL_TYPE"]] <- "MANUAL"
+  
+  return(all_sv_data)
+  
   
 }
 

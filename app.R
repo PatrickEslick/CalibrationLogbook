@@ -21,13 +21,13 @@ ui <- dashboardPage(
       
       tabItem(tabName = "new_cal_xml",
         box(
-          h2("Upload an XML file from SVMAQ"),
+          h3("Upload an XML file from SVMAQ"),
           fluidRow(
                 
             column(4,
                      
               fileInput("xml_file", label = "SVMAQ XML file"),
-              actionButton("write_db", "Record file")
+              actionButton("write_xml", "Record file")
                      
             ),
             column(6,
@@ -60,6 +60,10 @@ ui <- dashboardPage(
           tabPanel("pH",
             manualPhInput("ph_check1"),
             verbatimTextOutput("ph_out")
+          ),
+          tabPanel("Record",
+            h3("Record calibration"),
+            actionButton("write_manual", "Record")
           ),
         width = NULL)       
       )
@@ -125,7 +129,7 @@ server <- function(input, output, session) {
     
   })
   
-  observeEvent(input$write_db, {
+  observeEvent(input$write_xml, {
     
     if(is.null(sv_data())) {
       
@@ -176,6 +180,21 @@ server <- function(input, output, session) {
   output$ph_out <- renderPrint({
     
     print(ph_check())
+    
+  })
+  
+  observeEvent(input$write_manual, {
+      
+    combined_data <- combine_manual(sc_check(), tby_check(), do_check(), ph_check())
+    
+    max_keys <- get_max_keys(dbcon)
+    write_data <- combined_data %>%
+      add_keys(max_keys, source_file = "Manually entered") %>%
+      lookup_sensors(dbcon)
+    
+    write_sv_data(write_data, dbcon)
+    
+    showNotification("File recorded", type = "message")
     
   })
   

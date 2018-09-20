@@ -82,7 +82,7 @@ manualSc <- function(input, output, session) {
   sc_check_list <- reactive({
     
     
-    if(!is.null(input$sc_sensor_sn)) {
+    if(input$sc_sensor_sn != "") {
       
       #Get data for SC_CHECK table
       
@@ -123,7 +123,7 @@ manualSc <- function(input, output, session) {
           STD_LOT[length(STD_LOT) + 1] <- empty_if_null(input[[paste0("b_std_lot", i)]])
           READING[length(READING) + 1] <- empty_if_null(input[[paste0("b_reading", i)]])
           TEMPERATURE[length(TEMPERATURE) + 1] <- empty_if_null(input[[paste0("b_temperature", i)]])
-          DATETIME[length(DATETIME) + 1] <- empty_if_null(input[[paste0("b_reading", i)]])
+          DATETIME[length(DATETIME) + 1] <- empty_if_null(input[[paste0("b_datetime", i)]])
           TYPE[length(TYPE) + 1] <- "CALI"
         }
       }
@@ -141,7 +141,7 @@ manualSc <- function(input, output, session) {
           STD_LOT[length(STD_LOT) + 1] <- empty_if_null(input[[paste0("a_std_lot", i)]])
           READING[length(READING) + 1] <- empty_if_null(input[[paste0("a_reading", i)]])
           TEMPERATURE[length(TEMPERATURE) + 1] <- empty_if_null(input[[paste0("a_temperature", i)]])
-          DATETIME[length(DATETIME) + 1] <- empty_if_null(input[[paste0("a_reading", i)]])
+          DATETIME[length(DATETIME) + 1] <- empty_if_null(input[[paste0("a_datetime", i)]])
           TYPE[length(TYPE) + 1] <- "RECL"
         }
       }
@@ -149,7 +149,7 @@ manualSc <- function(input, output, session) {
     }
     
     sc_reading_df <- data.frame(STD_VALUE, STD_EXPIRATION, STD_TYPE, STD_LOT, READING, TEMPERATURE, 
-                                DATETIME, TYPE)
+                                DATETIME, TYPE, stringsAsFactors = FALSE)
     
     list_out <- list(SC_CHECK = sc_check_df, SC_READING = sc_reading_df)
     
@@ -240,7 +240,7 @@ manualTby <- function(input, output, session) {
   tby_check_list <- reactive({
     
     
-    if(!is.null(input$tby_sensor_sn)) {
+    if(input$tby_sensor_sn != "") {
       
       #Get data for tby_CHECK table
       
@@ -280,7 +280,7 @@ manualTby <- function(input, output, session) {
           STD_LOT[length(STD_LOT) + 1] <- empty_if_null(input[[paste0("b_std_lot", i)]])
           READING[length(READING) + 1] <- empty_if_null(input[[paste0("b_reading", i)]])
           TEMPERATURE[length(TEMPERATURE) + 1] <- empty_if_null(input[[paste0("b_temperature", i)]])
-          DATETIME[length(DATETIME) + 1] <- empty_if_null(input[[paste0("b_reading", i)]])
+          DATETIME[length(DATETIME) + 1] <- empty_if_null(input[[paste0("b_datetime", i)]])
           TYPE[length(TYPE) + 1] <- "CALI"
         }
       }
@@ -298,7 +298,7 @@ manualTby <- function(input, output, session) {
           STD_LOT[length(STD_LOT) + 1] <- empty_if_null(input[[paste0("a_std_lot", i)]])
           READING[length(READING) + 1] <- empty_if_null(input[[paste0("a_reading", i)]])
           TEMPERATURE[length(TEMPERATURE) + 1] <- empty_if_null(input[[paste0("a_temperature", i)]])
-          DATETIME[length(DATETIME) + 1] <- empty_if_null(input[[paste0("a_reading", i)]])
+          DATETIME[length(DATETIME) + 1] <- empty_if_null(input[[paste0("a_datetime", i)]])
           TYPE[length(TYPE) + 1] <- "RECL"
         }
       }
@@ -306,7 +306,7 @@ manualTby <- function(input, output, session) {
     }
     
     tby_reading_df <- data.frame(STD_VALUE, STD_EXPIRATION, STD_TYPE, STD_LOT, READING, TEMPERATURE, 
-                                DATETIME, TYPE)
+                                DATETIME, TYPE, stringsAsFactors = FALSE)
     
     list_out <- list(TBY_CHECK = tby_check_df, TBY_READING = tby_reading_df)
     
@@ -387,7 +387,7 @@ manualDo <- function(input, output, session) {
   
   do_check_list <- reactive({
   
-    if(!is.null(input$do_sensor_sn)) {
+    if(input$do_sensor_sn != "") {
       
       #Get data for do_CHECK table
       
@@ -461,7 +461,7 @@ manualDo <- function(input, output, session) {
     
     
     do_reading_df <- data.frame(TEMPERATURE, PRESSURE, SALINITY_CORRECTION, DO_TABLE_VALUE, READING, DATETIME, 
-                                ZERO_READING, TYPE)
+                                ZERO_READING, TYPE, stringsAsFactors = FALSE)
     
     list_out <- list(DO_CHECK = do_check_df, DO_READING = do_reading_df)
   
@@ -549,7 +549,7 @@ manualPh <- function(input, output, session) {
   ph_check_list <- reactive({
     
     
-    if(!is.null(input$ph_sensor_sn)) {
+    if(input$ph_sensor_sn != "") {
       
       #Get data for tby_CHECK table
       
@@ -619,7 +619,7 @@ manualPh <- function(input, output, session) {
     }
     
     ph_reading_df <- data.frame(STD_UNCORRECTED, STD_EXPIRATION, STD_TYPE, STD_LOT, TEMPERATURE, STD_VALUE, READING,
-                                DATETIME, MILLIVOLTS, TYPE)
+                                DATETIME, MILLIVOLTS, TYPE, stringsAsFactors = FALSE)
     
     list_out <- list(PH_CHECK = ph_check_df, PH_READING = ph_reading_df)
     
