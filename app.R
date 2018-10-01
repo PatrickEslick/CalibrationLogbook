@@ -3,6 +3,8 @@ library(shinydashboard)
 source("tools.R")
 source("modules.R")
 
+parms <- c("Specific cond at 25C", "Turbidity, FNU", "Dissolved oxygen", "pH")
+
 ui <- dashboardPage(
   dashboardHeader(title = "Calibration Logbook"),
   
@@ -11,7 +13,9 @@ ui <- dashboardPage(
       menuItem("New calibration", startExpanded = TRUE,
         menuSubItem("From XML", tabName = "new_cal_xml"),
         menuSubItem("Manual", tabName = "new_cal_manual")
-      )
+      ),
+      menuItem("View calibrations", tabName = "view_cal"),
+      menuItem("Export data", tabName = "export_data")
     )
   ),
   
@@ -66,6 +70,19 @@ ui <- dashboardPage(
             actionButton("write_manual", "Record")
           ),
         width = NULL)       
+      ),
+      tabItem("view_cal",
+        box(
+          h3("Find a calibration"),
+          fluidRow(
+            column(4, selectInput("find_cal_parm", "Parameter", choices = c("All", parms))),
+            column(3, uiOutput("sensor_sn_ui")),
+            column(4, dateRangeInput("find_cal_dates", "Dates"))
+          )
+        )        
+      ),
+      tabItem("export_data",
+        box()        
       )
     )
   )
@@ -195,6 +212,32 @@ server <- function(input, output, session) {
     write_sv_data(write_data, dbcon)
     
     showNotification("File recorded", type = "message")
+    
+  })
+  
+  sensor_list <- reactive({
+    
+    sensors <- tbl(dbcon, "SENSOR")
+    return(sensors)
+    
+  })
+  
+  output$sensor_sn_ui <- renderUI({
+    
+    sensors <- sensor_list()
+    if(input$find_cal_parm != "All") {
+      sensors <- sensors %>%
+        filter(PARAMETER == input$find_cal_parm)
+    }
+    sensor_sns <- pull(sensors, SENSOR_SN)
+    
+    selectInput("find_cal_sn", "Serial number", choices = sensor_sns)
+    
+  })
+  
+  calibration_list <- reactive({
+    
+    #Create a selectable list 
     
   })
   
