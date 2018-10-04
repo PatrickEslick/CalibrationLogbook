@@ -79,7 +79,7 @@ ui <- dashboardPage(
             fluidRow(
               column(4, selectInput("find_cal_parm", "Parameter", choices = parms)),
               column(3, uiOutput("sensor_sn_ui")),
-              column(4, dateRangeInput("find_cal_dates", "Dates"))
+              column(4, dateRangeInput("find_cal_dates", "Dates", start = Sys.Date() - 90, end = Sys.Date()))
             ),
             fluidRow(
               column(5, uiOutput("select_calibration_ui"))
