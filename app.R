@@ -1,5 +1,6 @@
 library(shiny)
 library(shinydashboard)
+library(dplyr)
 source("tools.R")
 source("modules.R")
 
@@ -75,10 +76,11 @@ ui <- dashboardPage(
         box(
           h3("Find a calibration"),
           fluidRow(
-            column(4, selectInput("find_cal_parm", "Parameter", choices = c("All", parms))),
+            column(4, selectInput("find_cal_parm", "Parameter", choices = parms)),
             column(3, uiOutput("sensor_sn_ui")),
             column(4, dateRangeInput("find_cal_dates", "Dates"))
-          )
+          ),
+          uiOutput("select_calibration_ui")
         )        
       ),
       tabItem("export_data",
@@ -231,13 +233,54 @@ server <- function(input, output, session) {
     }
     sensor_sns <- pull(sensors, SENSOR_SN)
     
-    selectInput("find_cal_sn", "Serial number", choices = sensor_sns)
+    selectInput("find_cal_sn", "Serial number", choices = c("All", sensor_sns))
     
   })
   
   calibration_list <- reactive({
     
-    #Create a selectable list 
+    #Find a list of calibrations that meet the given criteria
+    if(input$find_cal_parm == "Specific cond at 25C") {
+      basetable <- "SC_CHECK"
+    } else if (input$find_cal_parm == "Turbidity, FNU") {
+      basetable <- "TBY_CHECK"
+    } else if (input$find_cal_parm == "Dissolved oxygen") {
+      basetable <- "DO_CHECK"
+    } else if(input$find_cal_parm == "pH") {
+      basetable <- "PH_CHECK"
+    } else {
+      basetable <- "GEN_CHECK"
+    }
+    
+    check <- tbl(dbcon, basetable)
+    sensor <- tbl(dbcon, "SENSOR") %>%
+      select(SENSOR_ID, SENSOR_SN)
+    calibration <- tbl(dbcon, "CALIBRATION") %>%
+      select(CAL_ID, DATE)
+    
+    matching_cal <- inner_join(check, sensor) %>%
+      inner_join(calibration) %>%
+      filter(DATE >= input$find_cal_dates[1],
+             DATE <= input$find_cal_dates[2])
+    
+    if(!is.null(input$find_cal_sn)) {
+      if(input$find_cal_sn != "All")
+        matching_cal <- matching_cal %>%
+          filter(SENSOR_SN == input$find_cal_sn)
+    }
+    
+    matching_cal <- select(matching_cal, DATE, CAL_ID)
+    
+    cal_choices <- pull(matching_cal, CAL_ID)
+    names(cal_choices) <- pull(matching_cal, DATE)
+    
+    return(cal_choices)
+    
+  })
+  
+  output$select_calibration_ui <- renderUI({
+    
+    selectizeInput("which_cal", "View data from", choices = calibration_list(), selected = NULL)
     
   })
   

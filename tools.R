@@ -658,48 +658,48 @@ write_sv_data <- function(all_sv_data, dbcon) {
   write[["SENSOR"]] <- all_sv_data[["SENSOR"]] %>%
     filter(new) %>%
     select(SENSOR_ID, SENSOR_SN, PARAMETER, MANUFACTURER, MODEL)
-  
+
   write[["SOURCE"]] <- all_sv_data[["SOURCE"]] %>%
     select(SOURCE_ID, SOURCE_NAME, DATE_LOADED)
 
   write[["CALIBRATION"]] <- all_sv_data[["CALIBRATION"]] %>%
     select(CAL_ID, DATE, CAL_TYPE, SOURCE_ID)
-  
+
   write[["SC_CHECK"]] <- all_sv_data[["SC_CHECK"]] %>%
     select(SC_ID, CAL_ID, SENSOR_ID, CELL_CONSTANT, AIR_READING, COMMENT)
-  
+
   write[["SC_READING"]] <- all_sv_data[["SC_READING"]] %>%
     select(SCR_ID, SC_ID, STD_VALUE, STD_EXPIRATION, STD_TYPE, STD_LOT, READING,
            TEMPERATURE, DATETIME, TYPE)
-  
+
   write[["TBY_CHECK"]] <- all_sv_data[["TBY_CHECK"]] %>%
     select(TBY_ID, CAL_ID, SENSOR_ID, SENSOR_LIMIT, COMMENT)
-  
+
   write[["TBY_READING"]] <- all_sv_data[["TBY_READING"]] %>%
     select(TBYR_ID, TBY_ID, STD_VALUE, STD_EXPIRATION, STD_TYPE, STD_LOT, READING,
            TEMPERATURE, DATETIME, TYPE)
-  
+
   write[["DO_CHECK"]] <- all_sv_data[["DO_CHECK"]] %>%
     select(DO_ID, CAL_ID, SENSOR_ID, SC_AIR_SATURATED_WATER, TEMP_AIR_SATURATED_WATER,
            SALINITY, DATE_BAROMETER_CALIBRATED, ODO_GAIN_PRE, ODO_CAP_CHANGED, ODO_CAP_SN,
            ODO_GAIN_POST, COMMENT)
-  
+
   write[["DO_READING"]] <- all_sv_data[["DO_READING"]] %>%
     select(DOR_ID, DO_ID, TEMPERATURE, PRESSURE, SALINITY_CORRECTION, DO_TABLE_VALUE, READING,
            DATETIME, ZERO_READING, TYPE)
-  
+
   write[["PH_CHECK"]] <- all_sv_data[["PH_CHECK"]] %>%
     select(PH_ID, CAL_ID, SENSOR_ID, COMMENT)
-  
+
   write[["PH_READING"]] <- all_sv_data[["PH_READING"]] %>%
     select(PHR_ID, PH_ID, STD_UNCORRECTED, STD_TYPE, STD_LOT, TEMPERATURE, STD_VALUE, READING,
            DATETIME, MILLIVOLTS, TYPE)
-  
+
   tables <- c("SENSOR", "SOURCE","CALIBRATION", "SC_CHECK", "SC_READING", "TBY_CHECK", "TBY_READING",
               "DO_CHECK", "DO_READING", "PH_CHECK", "PH_READING")
   
   for(i in tables) {
-    
+
     if(nrow(write[[i]]) > 0) {
       
       dbWriteTable(dbcon, i, write[[i]], append=TRUE)
