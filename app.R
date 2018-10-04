@@ -73,15 +73,26 @@ ui <- dashboardPage(
         width = NULL)       
       ),
       tabItem("view_cal",
-        box(
-          h3("Find a calibration"),
-          fluidRow(
-            column(4, selectInput("find_cal_parm", "Parameter", choices = parms)),
-            column(3, uiOutput("sensor_sn_ui")),
-            column(4, dateRangeInput("find_cal_dates", "Dates"))
-          ),
-          uiOutput("select_calibration_ui")
-        )        
+        fluidRow(
+          box(
+            h3("Find a calibration"),
+            fluidRow(
+              column(4, selectInput("find_cal_parm", "Parameter", choices = parms)),
+              column(3, uiOutput("sensor_sn_ui")),
+              column(4, dateRangeInput("find_cal_dates", "Dates"))
+            ),
+            fluidRow(
+              column(5, uiOutput("select_calibration_ui"))
+            )
+          )
+        ),
+        fluidRow(
+          box(
+            h3("Calibration data"),
+            tableOutput("check_table"),
+            tableOutput("readings_table"),
+          width = NULL)
+        )
       ),
       tabItem("export_data",
         box()        
@@ -237,20 +248,27 @@ server <- function(input, output, session) {
     
   })
   
+  view_base_table <- reactive({
+    
+    if(input$find_cal_parm == "Specific cond at 25C") {
+      basetable <- c("SC_CHECK", "SC_READING")
+    } else if (input$find_cal_parm == "Turbidity, FNU") {
+      basetable <- c("TBY_CHECK", "TBY_READING")
+    } else if (input$find_cal_parm == "Dissolved oxygen") {
+      basetable <- c("DO_CHECK", "DO_READING")
+    } else if(input$find_cal_parm == "pH") {
+      basetable <- c("PH_CHECK", "PH_READING")
+    } else {
+      basetable <- c("GEN_CHECK", "GEN_READING")
+    }
+    
+    return(basetable)
+    
+  })
+  
   calibration_list <- reactive({
     
-    #Find a list of calibrations that meet the given criteria
-    if(input$find_cal_parm == "Specific cond at 25C") {
-      basetable <- "SC_CHECK"
-    } else if (input$find_cal_parm == "Turbidity, FNU") {
-      basetable <- "TBY_CHECK"
-    } else if (input$find_cal_parm == "Dissolved oxygen") {
-      basetable <- "DO_CHECK"
-    } else if(input$find_cal_parm == "pH") {
-      basetable <- "PH_CHECK"
-    } else {
-      basetable <- "GEN_CHECK"
-    }
+    basetable <- view_base_table()[1]
     
     check <- tbl(dbcon, basetable)
     sensor <- tbl(dbcon, "SENSOR") %>%
@@ -269,7 +287,8 @@ server <- function(input, output, session) {
           filter(SENSOR_SN == input$find_cal_sn)
     }
     
-    matching_cal <- select(matching_cal, DATE, CAL_ID)
+    matching_cal <- select(matching_cal, DATE, CAL_ID) %>%
+      arrange(DATE)
     
     cal_choices <- pull(matching_cal, CAL_ID)
     names(cal_choices) <- pull(matching_cal, DATE)
@@ -281,6 +300,62 @@ server <- function(input, output, session) {
   output$select_calibration_ui <- renderUI({
     
     selectizeInput("which_cal", "View data from", choices = calibration_list(), selected = NULL)
+    
+  })
+  
+  selected_cal_check <- reactive({
+    
+    #Get a tbl of the data frame selected by input$which_cal
+    if(is.null(input$which_cal))
+      return(NULL)
+    
+    basetable <- view_base_table()[1]
+    
+    check <- tbl(dbcon, basetable)
+    sensor <- tbl(dbcon, "SENSOR") %>%
+      select(SENSOR_ID, SENSOR_SN)
+    cal <- tbl(dbcon, "CALIBRATION") %>%
+      filter(CAL_ID == input$which_cal) %>%
+      select(DATE, CAL_TYPE, CAL_ID) %>%
+      rename(ENTERED_FROM = CAL_TYPE)
+    
+    output <- inner_join(cal, check) %>%
+      inner_join(sensor) %>%
+      select(-ends_with("_ID"))
+    
+    return(output)
+    
+  })
+  
+  selected_cal_readings <- reactive({
+    
+    if(is.null(input$which_cal))
+      return(NULL)
+    
+    checktable <- view_base_table()[1]
+    readingtable <- view_base_table()[2]
+    
+    check <- tbl(dbcon, checktable) %>%
+      select(ends_with(("_ID"))) %>%
+      filter(CAL_ID == input$which_cal)
+    readings <- tbl(dbcon, readingtable)
+    
+    output <- inner_join(check, readings) %>%
+      select(-ends_with("_ID"))
+  
+    return(output)
+    
+  })
+  
+  output$check_table <- renderTable({
+    
+    selected_cal_check()
+    
+  })
+  
+  output$readings_table <- renderTable({
+    
+    selected_cal_readings()
     
   })
   
