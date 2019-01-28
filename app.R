@@ -300,22 +300,8 @@ server <- function(input, output, session) {
       return(NULL)
     
     #Find a list of calibrations that meet the given criteria
-    if(input$find_cal_parm == "Specific cond at 25C") {
-      check_basetable <- "SC_CHECK"
-      reading_basetable <- "SC_READING"
-    } else if (input$find_cal_parm == "Turbidity, FNU") {
-      check_basetable <- "TBY_CHECK"
-      reading_basetable <- "TBY_READING"
-    } else if (input$find_cal_parm == "Dissolved oxygen") {
-      check_basetable <- "DO_CHECK"
-      reading_basetable <- "DO_READING"
-    } else if(input$find_cal_parm == "pH") {
-      check_basetable <- "PH_CHECK"
-      reading_basetable <- "PH_READING"
-    } else {
-      check_basetable <- "GEN_CHECK"
-      check_basetable <- "GEN_READING"
-    }
+    check_basetable <- view_base_table()[1]
+    reading_basetable <- view_base_table()[2]
     
     check_table <- tbl(dbcon, check_basetable) %>%
       filter(CAL_ID == input$which_cal)
