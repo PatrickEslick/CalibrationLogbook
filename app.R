@@ -80,8 +80,10 @@ ui <- dashboardPage(
             column(3, uiOutput("sensor_sn_ui")),
             column(4, dateRangeInput("find_cal_dates", "Dates"))
           ),
-          uiOutput("select_calibration_ui")
-        )        
+          uiOutput("select_calibration_ui"),
+          tableOutput("view_check_out"),
+          tableOutput("view_reading_out")
+        )
       ),
       tabItem("export_data",
         box()        
@@ -281,6 +283,66 @@ server <- function(input, output, session) {
   output$select_calibration_ui <- renderUI({
     
     selectizeInput("which_cal", "View data from", choices = calibration_list(), selected = NULL)
+    
+  })
+  
+  selected_calibration_out <- reactive({
+    
+    if(input$which_cal == "")
+      return(NULL)
+    
+    #Find a list of calibrations that meet the given criteria
+    if(input$find_cal_parm == "Specific cond at 25C") {
+      check_basetable <- "SC_CHECK"
+      reading_basetable <- "SC_READING"
+    } else if (input$find_cal_parm == "Turbidity, FNU") {
+      check_basetable <- "TBY_CHECK"
+      reading_basetable <- "TBY_READING"
+    } else if (input$find_cal_parm == "Dissolved oxygen") {
+      check_basetable <- "DO_CHECK"
+      reading_basetable <- "DO_READING"
+    } else if(input$find_cal_parm == "pH") {
+      check_basetable <- "PH_CHECK"
+      reading_basetable <- "PH_READING"
+    } else {
+      check_basetable <- "GEN_CHECK"
+      check_basetable <- "GEN_READING"
+    }
+    
+    check_table <- tbl(dbcon, check_basetable) %>%
+      filter(CAL_ID == input$which_cal)
+    
+    reading_table <- tbl(dbcon, reading_basetable)
+    
+    sensor_table <- tbl(dbcon, "SENSOR") %>%
+      select(SENSOR_ID, SENSOR_SN)
+    
+    check <- check_table %>%
+      inner_join(sensor_table) %>%
+      select(-ends_with("_ID"))
+    
+    check_table <- check_table %>%
+      select(ends_with("_ID"))
+    
+    reading <- check_table %>%
+      inner_join(reading_table) %>%
+      select(-ends_with("_ID"))
+    
+    out <- list(check, reading)
+    names(out) <- c("check","reading")
+    return(out)
+    
+  })
+  
+  output$view_check_out <- renderTable({
+    
+    selected_calibration_out()$check
+    
+  })
+  
+  output$view_reading_out <- renderTable({
+    
+    selected_calibration_out()$reading
     
   })
   
