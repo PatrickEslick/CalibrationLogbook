@@ -239,20 +239,27 @@ server <- function(input, output, session) {
     
   })
   
+  view_base_table <- reactive({
+    
+    if(input$find_cal_parm == "Specific cond at 25C") {
+      basetable <- c("SC_CHECK", "SC_READING")
+    } else if (input$find_cal_parm == "Turbidity, FNU") {
+      basetable <- c("TBY_CHECK", "TBY_READING")
+    } else if (input$find_cal_parm == "Dissolved oxygen") {
+      basetable <- c("DO_CHECK", "DO_READING")
+    } else if(input$find_cal_parm == "pH") {
+      basetable <- c("PH_CHECK", "PH_READING")
+    } else {
+      basetable <- c("GEN_CHECK", "GEN_READING")
+    }
+    
+    return(basetable)
+    
+  })
+  
   calibration_list <- reactive({
     
-    #Find a list of calibrations that meet the given criteria
-    if(input$find_cal_parm == "Specific cond at 25C") {
-      basetable <- "SC_CHECK"
-    } else if (input$find_cal_parm == "Turbidity, FNU") {
-      basetable <- "TBY_CHECK"
-    } else if (input$find_cal_parm == "Dissolved oxygen") {
-      basetable <- "DO_CHECK"
-    } else if(input$find_cal_parm == "pH") {
-      basetable <- "PH_CHECK"
-    } else {
-      basetable <- "GEN_CHECK"
-    }
+    basetable <- view_base_table()[1]
     
     check <- tbl(dbcon, basetable)
     sensor <- tbl(dbcon, "SENSOR") %>%
@@ -271,7 +278,8 @@ server <- function(input, output, session) {
           filter(SENSOR_SN == input$find_cal_sn)
     }
     
-    matching_cal <- select(matching_cal, DATE, CAL_ID)
+    matching_cal <- select(matching_cal, DATE, CAL_ID) %>%
+      arrange(DATE)
     
     cal_choices <- pull(matching_cal, CAL_ID)
     names(cal_choices) <- pull(matching_cal, DATE)
