@@ -629,4 +629,149 @@ manualPh <- function(input, output, session) {
   
 }
 
+##########################################################################################################################################################
+#
+# WT
+# Module for getting water temperature calibration data
+#
+##########################################################################################################################################################
 
+
+manualWtInput <- function(id) {
+  
+  ns <- NS(id)
+  
+  tagList(
+    textInput(ns("wt_sensor_sn"), label = "Sensor serial number", placeholder = "12A34567"),
+    textInput(ns("wt_comment"), label = "Comment", width = "65%"),
+    tabsetPanel(
+      tabPanel("Comparison",
+        fluidRow(
+          column(3, textInput(ns("field_sensor_sn"), label = "Field Sensor Serial Number", placeholder = "12A3456")),
+          column(3, textInput(ns("wt_comparison_datetime"), label = "Date/Time", placeholder = "yyyy-mm-dd hh:mm"))
+        ),
+        fluidRow(
+          column(2, textInput(ns("nist_temp_comp"), label = "NIST/Field temperature")),
+          column(2, textInput(ns("mon_temp_comp"), label = "Site monitor temperature"))
+        ),
+        fluidRow(
+          column(2,
+            textInput(ns("last_2_point_check"), label = "Last two point check", placeholder = "yyyy-mm-dd"),
+            textInput(ns("last_5_point_check"), label = "Last five point check", placeholder = "yyyy-mm-dd")
+          )
+        )
+      ),
+      tabPanel("Multi-point check",
+        sliderInput(ns("reading_count"), label = "Number of readings", min = 1, max = 5, value = 1, step = 1),
+        fluidRow(
+          column(3, textInput(ns("nist_cert_date"), label = "NIST Certification Date", placeholder = "yyyy-mm-dd")),
+          column(3, textInput(ns("nist_sn"), label = "NIST Serial Number"))
+        ),
+        uiOutput(ns("wt_multipoint_ui"))
+      )
+    )
+  )
+  
+}
+
+manualWt <- function(input, output, session) {
+  
+  output$wt_multipoint_ui <- renderUI({
+    
+    ns <- session$ns
+    
+    lapply(1:input$reading_count, function(i) {
+      fluidRow(
+        column(2, textInput(ns(paste0("nist_temp", i)), label = "NIST Temperature")),
+        column(2, textInput(ns(paste0("mon_temp", i)), label = "Monitor Temperature")),
+        column(2, textInput(ns(paste0("datetime", i)), label = "Date/Time",
+                            value = as.character(Sys.time(), format="%Y-%m-%d %H:%M")))
+      )
+    })
+  })
+  
+  wt_list <- reactive({
+    
+    if(input$wt_sensor_sn != "") {
+      
+      #Get data for WT_COMPARISON_CHECK
+      
+      SENSOR_ID <- input$wt_sensor_sn
+      FIELD_SENSOR_SN <- empty_if_null(input$field_sensor_sn)
+      DATETIME <- empty_if_null(input$wt_comparison_datetime)
+      CHECK_MEASURE <- empty_if_null(input$nist_temp_comp)
+      SENSOR_MEASURE <- empty_if_null(input$mon_temp_comp)
+      TWO_POINT_CHECK_DATE <- empty_if_null(input$last_2_point_check)
+      FIVE_POINT_CHECK_DATE <- empty_if_null(input$last_5_point_check)
+      COMMENT <- empty_if_null(input$wt_comment)
+      
+      
+      wt_comparison_check_df <- data.frame(SENSOR_ID, FIELD_SENSOR_SN, DATETIME, 
+                                           CHECK_MEASURE, SENSOR_MEASURE,
+                                           TWO_POINT_CHECK_DATE, FIVE_POINT_CHECK_DATE,
+                                           COMMENT,
+                                           stringsAsFactors = FALSE)
+
+      if(all(c(FIELD_SENSOR_SN, DATETIME, CHECK_MEASURE, SENSOR_MEASURE, TWO_POINT_CHECK_DATE,
+               FIVE_POINT_CHECK_DATE) == ""))
+        wt_comparison_check_df <- wt_comparison_check_df[0,]
+      
+    } else {
+      
+      wt_comparison_check_df <- data.frame(SENSOR_ID = vector(), FIELD_SENSOR_SN = vector(), 
+                                DATETIME = vector(), CHECK_MEASURE = vector(), 
+                                SENSOR_MEASURE = vector(), TWO_POINT_CHECK_DATE = vector(),
+                                FIVE_POINT_CHECK_DATE = vector(), COMMENT = vector())
+      
+    }
+    
+    #Get data for WT_MULTIPOINT_CHECK table
+    if(input$wt_sensor_sn != "") {
+      
+      SENSOR_ID <- input$wt_sensor_sn
+      NIST_CERT_DATE <- empty_if_null(input$nist_cert_date)
+      NIST_SN <- empty_if_null(input$nist_sn)
+      COMMENT <- empty_if_null(input$wt_comment)
+      
+      wt_multipoint_check_df <- data.frame(SENSOR_ID, NIST_CERT_DATE, NIST_SN, COMMENT,
+                                           stringsAsFactors = FALSE)
+      
+    } else {
+      
+      wt_multipoint_check_df <- data.frame(SENSOR_ID = vector(), NIST_CERT_DATE = vector(),
+                                           NIST_SN = vector(), COMMENT = vector())
+      
+    }
+    
+    
+    #Get data for WT_MULTIPOINT_READING table
+    
+    NIST_READING <- vector()
+    MONITOR_READING <- vector()
+    DATETIME <- vector()
+    
+    # Get the multi-point data
+    for(i in 1:input$reading_count) {
+      
+      if(!is.null(input[[paste0("nist_temp", i)]])) {
+        if(input[[paste0("nist_temp", i)]] != "") {
+          NIST_READING[length(NIST_READING) + 1] <- input[[paste0("nist_temp", i)]]
+          MONITOR_READING[length(MONITOR_READING) + 1] <- input[[paste0("mon_temp", i)]]
+          DATETIME[length(DATETIME) + 1] <- empty_if_null(input[[paste0("datetime", i)]])
+        }
+      }
+      
+    }
+    
+    wt_multipoint_reading_df <- data.frame(NIST_READING, MONITOR_READING, DATETIME, 
+                                           stringsAsFactors = FALSE)
+    
+    list_out <- list(WT_COMPARISON_CHECK = wt_comparison_check_df, 
+                     WT_MULTIPOINT_CHECK = wt_multipoint_check_df,
+                     WT_MULTIPOINT_READING = wt_multipoint_reading_df)
+    
+  })
+  
+  return(wt_list)
+  
+}

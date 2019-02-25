@@ -340,6 +340,109 @@ get_PH_READING <- function(sv_xml) {
   
 }
 
+get_WT_MULTIPOINT_CHECK <- function(sv_xml) {
+  
+  wt_drift <- xml_find_all(sv_xml, ".//DriftCheckWaterTemperature")
+  
+  if(length(wt_drift) != 0) {
+    
+    SENSOR_ID <- xml_find_first(wt_drift, ".//Sensor//SerialNumber") %>%
+      xml_text()
+    NIST_CERT_DATE <- xml_find_first(wt_drift, ".//NistAstmCertificationDate") %>%
+      xml_text()
+    NIST_SN <- xml_find_first(wt_drift, ".//NistSerialNumber") %>%
+      xml_text()
+    COMMENT <- xml_find_first(wt_drift, ".//Comment") %>%
+      xml_text()
+    
+    wt_check_df <- data.frame(SENSOR_ID, NIST_CERT_DATE, NIST_SN, COMMENT, 
+                              stringsAsFactors = FALSE)
+    
+  } else {
+    
+    wt_check_df <- data.frame(SENSOR_ID = vector(), NIST_CERT_DATE = vector(),
+                              NIST_SN = vector(), COMMENT = vector())
+    
+  } 
+  
+  return(wt_check_df)
+  
+  
+}
+
+get_WT_MULTIPOINT_READING <- function(sv_xml) {
+  
+  wt_readings <- xml_find_all(sv_xml, ".//MultiPointTempCheck")
+  
+  if(length(wt_readings) > 0) {
+    
+    NIST_READING <- xml_find_first(wt_readings, ".//WaterTemperatureNistMeasure") %>%
+      xml_text()
+    MONITOR_READING <- xml_find_first(wt_readings, ".//WaterTemperatureMeasure") %>%
+      xml_text()
+    DATETIME <- xml_find_first(wt_readings, ".//ReadingDateTime") %>%
+      xml_text() %>%
+      ymd_hms() %>%
+      as.character(format="%Y-%m-%d %H:%M:%S")
+    
+    wt_reading_df <- data.frame(NIST_READING, MONITOR_READING, DATETIME,
+                                stringsAsFactors = FALSE)
+    
+  } else {
+    
+    wt_reading_df <- data.frame(NIST_READING = vector(), MONITOR_READING = vector(),
+                                DATETIME = vector())
+    
+  }
+  
+  return(wt_reading_df)
+  
+}
+
+get_WT_COMPARISON <- function(sv_xml) {
+  
+  wt_drift <- xml_find_all(sv_xml, ".//DriftCheckWaterTemperature")
+  
+  if(length(wt_drift) != 0) {
+    
+    SENSOR_ID <- xml_find_first(wt_drift, ".//Sensor//SerialNumber") %>%
+      xml_text()
+    FIELD_SENSOR_SN <- xml_find_first(wt_drift, ".//FieldSensor//SerialNumber") %>%
+      xml_text()
+    DATETIME <- xml_find_first(wt_drift, ".//ReadingDateTime") %>%
+      xml_text() %>%
+      ymd_hms() %>%
+      as.character(format="%Y-%m-%d %H:%M:%S")
+    CHECK_MEASURE <- xml_find_first(wt_drift, ".//WaterTemperatureMeterMeasure") %>%
+      xml_text()
+    SENSOR_MEASURE <- xml_find_first(wt_drift, ".//WaterTemperatureMeasure") %>%
+      xml_text()
+    TWO_POINT_CHECK_DATE <- xml_find_first(wt_drift, ".//TwoPointCheckDate") %>%
+      xml_text()
+    FIVE_POINT_CHECK_DATE <- xml_find_first(wt_drift, ".//FivePointCheckDate") %>%
+      xml_text()
+    COMMENT <- xml_find_first(wt_drift, ".//Comment") %>%
+      xml_text()
+    
+    wt_check_df <- data.frame(SENSOR_ID, FIELD_SENSOR_SN, DATETIME, CHECK_MEASURE,
+                              SENSOR_MEASURE, TWO_POINT_CHECK_DATE, FIVE_POINT_CHECK_DATE,
+                              COMMENT,
+                              stringsAsFactors = FALSE)
+    
+  } else {
+    
+    wt_check_df <- data.frame(SENSOR_ID = vector(), FIELD_SENSOR_SN = vector(),
+                              DATETIME = vector(), CHECK_MEASURE = vector(), 
+                              SENSOR_MEASURE = vector(), TWO_POINT_CHECK_DATE = vector(),
+                              FIVE_POINT_CHECK_DATE = vector(), COMMENT = vector(),
+                              stringsAsFactors = FALSE)
+    
+  } 
+  
+  return(wt_check_df)
+  
+}
+
 get_CAL_TYPE <- function(sv_xml) {
   
   cal_type <- "SITEVISIT"
@@ -360,6 +463,9 @@ get_ALL <- function(sv_xml) {
   all_sv_data[["PH_READING"]] <- get_PH_READING(sv_xml)
   all_sv_data[["DO_CHECK"]] <- get_DO_CHECK(sv_xml)
   all_sv_data[["DO_READING"]] <- get_DO_READING(sv_xml)
+  all_sv_data[["WT_COMPARISON_CHECK"]] <- get_WT_COMPARISON(sv_xml)
+  all_sv_data[["WT_MULTIPOINT_CHECK"]] <- get_WT_MULTIPOINT_CHECK(sv_xml)
+  all_sv_data[["WT_MULTIPOINT_READING"]] <- get_WT_MULTIPOINT_READING(sv_xml)
   all_sv_data[["CAL_TYPE"]] <- get_CAL_TYPE(sv_xml)
   
   return(all_sv_data)
@@ -372,11 +478,11 @@ add_keys <- function(all_sv_data, max_keys, source_file) {
                      DATE_LOADED = as.character(Sys.time(), format="%Y-%m-%d %H:%M:%S"))
   all_sv_data[["SOURCE"]] <- source
   
-  
-  
   #Find the date of the first reading
   reading_dates <- c(all_sv_data[["SC_READING"]]$DATETIME, all_sv_data[["TBY_READING"]]$DATETIME,
-                     all_sv_data[["PH_READING"]]$DATETIME, all_sv_data[["DO_READING"]]$DATETIME) %>%
+                     all_sv_data[["PH_READING"]]$DATETIME, all_sv_data[["DO_READING"]]$DATETIME,
+                     all_sv_data[["WT_COMPARISON_CHECK"]]$DATETIME,
+                     all_sv_data[["WT_MULTIPOINT_READING"]]$DATETIME) %>%
     as.POSIXct()
   if(length(reading_dates) > 0) {
     cal_date <- min(reading_dates) %>% as.character(format="%Y-%m-%d")
@@ -478,6 +584,43 @@ add_keys <- function(all_sv_data, max_keys, source_file) {
     
   }
   
+  if(nrow(all_sv_data[["WT_MULTIPOINT_CHECK"]]) > 0) {
+    all_sv_data[["WT_MULTIPOINT_CHECK"]]$WT_MULTIPOINT_ID <- 
+      1 + max_keys["WT_MULTIPOINT_ID"]
+    all_sv_data[["WT_MULTIPOINT_CHECK"]]$CAL_ID <- calibration$CAL_ID
+    
+    if(nrow(all_sv_data[["WT_MULTIPOINT_READING"]]) > 0) {
+      
+      all_sv_data[["WT_MULTIPOINT_READING"]]$WT_MULTIPOINT_ID <- 
+        1 + max_keys["WT_MULTIPOINT_ID"]
+      all_sv_data[["WT_MULTIPOINT_READING"]]$WTR_MULTIPOINT_ID <- 
+        1:nrow(all_sv_data[["WT_MULTIPOINT_READING"]])
+      all_sv_data[["WT_MULTIPOINT_READING"]]$WTR_MULTIPOINT_ID <- 
+        all_sv_data[["WT_MULTIPOINT_READING"]]$WTR_MULTIPOINT_ID + max_keys["WTR_MULTIPOINT_ID"]
+    }
+    
+  } else {
+    
+    all_sv_data[["WT_MULTIPOINT_CHECK"]]$WT_MULTIPOINT_ID <- vector()
+    all_sv_data[["WT_MULTIPOINT_CHECK"]]$CAL_ID <- vector()
+    all_sv_data[["WT_MULTIPOINT_READING"]]$WT_MULTIPOINT_ID <- vector()
+    all_sv_data[["WT_MULTIPOINT_READING"]]$WTR_MULTIPOINT_ID <- vector()
+    
+  }
+  
+  if(nrow(all_sv_data[["WT_COMPARISON_CHECK"]]) > 0) {
+    
+    all_sv_data[["WT_COMPARISON_CHECK"]]$WT_COMP_ID <- 
+      1 + max_keys["WT_COMP_ID"]
+    all_sv_data[["WT_COMPARISON_CHECK"]]$CAL_ID <- calibration$CAL_ID
+    
+  } else {
+    
+    all_sv_data[["WT_COMPARISON_CHECK"]]$WT_COMP_ID <- vector()
+    all_sv_data[["WT_COMPARISON_CHECK"]]$CAL_ID <- vector()
+    
+  }
+  
   return(all_sv_data)
   
 }
@@ -521,7 +664,6 @@ get_max_keys <- function(dbcon) {
   } else {
     max_scr_id <- 0
   }
-  
   
   tby_id <- tbl(dbcon, "TBY_CHECK") %>%
     pull(TBY_ID)
@@ -570,12 +712,39 @@ get_max_keys <- function(dbcon) {
   } else {
     max_phr_id <- 0
   }
+  
+  wt_comp_id <- tbl(dbcon, "WT_COMPARISON_CHECK") %>%
+    pull(WT_COMP_ID)
+  if(length(wt_comp_id) > 0) {
+    max_wt_comp_id <- max(wt_comp_id)
+  } else {
+    max_wt_comp_id <- 0
+  }
+  
+  wt_multipoint_check_id <- tbl(dbcon, "WT_MULTIPOINT_CHECK") %>%
+    pull(WT_MULTIPOINT_ID)
+  if(length(wt_comp_id) > 0) {
+    max_wt_multipoint_id <- max(wt_multipoint_check_id)
+  } else {
+    max_wt_multipoint_id <- 0
+  }
+  
+  wt_multipoint_reading_id <- tbl(dbcon, "WT_MULTIPOINT_READING") %>%
+    pull(WTR_MULTIPOINT_ID)
+  if(length(wt_multipoint_reading_id) > 0) {
+    max_wtr_multipoint_id <- max(wt_multipoint_reading_id)
+  } else {
+    max_wtr_multipoint_id <- 0
+  }
 
   max_keys <- c("CAL_ID" = max_cal_id, "SOURCE_ID" = max_source_id,
                 "SC_ID" = max_sc_id, "SCR_ID" = max_scr_id,
                 "TBY_ID" = max_tby_id, "TBYR_ID" = max_tbyr_id,
                 "DO_ID" = max_do_id, "DOR_ID" = max_dor_id,
-                "PH_ID" = max_ph_id, "PHR_ID" = max_phr_id)
+                "PH_ID" = max_ph_id, "PHR_ID" = max_phr_id,
+                "WT_COMP_ID" = max_wt_comp_id, 
+                "WT_MULTIPOINT_ID" = max_wt_multipoint_id,
+                "WTR_MULTIPOINT_ID" = max_wtr_multipoint_id)
   
   return(max_keys)
   
@@ -645,6 +814,26 @@ lookup_sensors <- function(all_sv_data, dbcon) {
     
   }
   
+  if(nrow(all_sv_data[["WT_MULTIPOINT_CHECK"]]) > 0) {
+    
+    wt_sensor_sn <- all_sv_data[["WT_MULTIPOINT_CHECK"]]$SENSOR_ID
+    wt_sensor_id <- sensors %>%
+      filter(SENSOR_SN == wt_sensor_sn, PARAMETER == "Temperature, water") %>%
+      pull(SENSOR_ID)
+    all_sv_data[["WT_MULTIPOINT_CHECK"]]$SENSOR_ID <- wt_sensor_id
+    
+  }
+  
+  if(nrow(all_sv_data[["WT_COMPARISON_CHECK"]]) > 0) {
+    
+    wt_sensor_sn <- all_sv_data[["WT_COMPARISON_CHECK"]]$SENSOR_ID
+    wt_sensor_id <- sensors %>%
+      filter(SENSOR_SN == wt_sensor_sn, PARAMETER == "Temperature, water") %>%
+      pull(SENSOR_ID)
+    all_sv_data[["WT_COMPARISON_CHECK"]]$SENSOR_ID <- wt_sensor_id
+    
+  }
+  
   return(all_sv_data)
   
 }
@@ -694,9 +883,20 @@ write_sv_data <- function(all_sv_data, dbcon) {
   write[["PH_READING"]] <- all_sv_data[["PH_READING"]] %>%
     select(PHR_ID, PH_ID, STD_UNCORRECTED, STD_TYPE, STD_LOT, TEMPERATURE, STD_VALUE, READING,
            DATETIME, MILLIVOLTS, TYPE)
+  
+  write[["WT_COMPARISON_CHECK"]] <- all_sv_data[["WT_COMPARISON_CHECK"]] %>%
+    select(WT_COMP_ID, CAL_ID, SENSOR_ID, FIELD_SENSOR_SN, DATETIME, CHECK_MEASURE,
+           SENSOR_MEASURE, TWO_POINT_CHECK_DATE, FIVE_POINT_CHECK_DATE, COMMENT)
+  
+  write[["WT_MULTIPOINT_CHECK"]] <- all_sv_data[["WT_MULTIPOINT_CHECK"]] %>%
+    select(WT_MULTIPOINT_ID, SENSOR_ID, CAL_ID, NIST_CERT_DATE, NIST_SN, COMMENT)
+  
+  write[["WT_MULTIPOINT_READING"]] <- all_sv_data[["WT_MULTIPOINT_READING"]] %>%
+    select(WTR_MULTIPOINT_ID, WT_MULTIPOINT_ID, NIST_READING, MONITOR_READING, DATETIME)
 
   tables <- c("SENSOR", "SOURCE","CALIBRATION", "SC_CHECK", "SC_READING", "TBY_CHECK", "TBY_READING",
-              "DO_CHECK", "DO_READING", "PH_CHECK", "PH_READING")
+              "DO_CHECK", "DO_READING", "PH_CHECK", "PH_READING", "WT_COMPARISON_CHECK",
+              "WT_MULTIPOINT_CHECK", "WT_MULTIPOINT_READING")
   
   for(i in tables) {
 
@@ -710,13 +910,15 @@ write_sv_data <- function(all_sv_data, dbcon) {
   
 }
 
-combine_manual <- function(sc_list, tby_list, do_list, ph_list) {
+combine_manual <- function(sc_list, tby_list, do_list, ph_list, wt_list) {
   
   #Make a sensor data frame
   sc_check <- sc_list[["SC_CHECK"]]
   tby_check <- tby_list[["TBY_CHECK"]]
   do_check <- do_list[["DO_CHECK"]]
   ph_check <- ph_list[["PH_CHECK"]]
+  wt_comp_check <- wt_list[["WT_COMPARISON_CHECK"]]
+  wt_multi_check <- wt_list[["WT_MULTIPOINT_CHECK"]]
   
   SENSOR_SN <- vector()
   PARAMETER <- vector()
@@ -746,8 +948,22 @@ combine_manual <- function(sc_list, tby_list, do_list, ph_list) {
     MANUFACTURER[length(MANUFACTURER) + 1] <- ""
     MODEL[length(MODEL) + 1] <- ""
   }
+  if(nrow(wt_multi_check) != 0) {
+    SENSOR_SN[length(SENSOR_SN) + 1] <- wt_multi_check$SENSOR_ID
+    PARAMETER[length(PARAMETER) + 1] <- "Temperature, water"
+    MANUFACTURER[length(MANUFACTURER) + 1] <- ""
+    MODEL[length(MODEL) + 1] <- ""
+  }
+  if(nrow(wt_comp_check) != 0) {
+    SENSOR_SN[length(SENSOR_SN) + 1] <- wt_comp_check$SENSOR_ID
+    PARAMETER[length(PARAMETER) + 1] <- "Temperature, water"
+    MANUFACTURER[length(MANUFACTURER) + 1] <- ""
+    MODEL[length(MODEL) + 1] <- ""
+  }
+
   sensor_df <- data.frame(SENSOR_SN, PARAMETER, MANUFACTURER, MODEL)
-  
+  sensor_df <- unique(sensor_df)
+
   all_sv_data <- list()
   all_sv_data[["SENSOR"]] <- sensor_df
   all_sv_data[["SC_CHECK"]] <- sc_list[["SC_CHECK"]]
@@ -758,6 +974,9 @@ combine_manual <- function(sc_list, tby_list, do_list, ph_list) {
   all_sv_data[["PH_READING"]] <- ph_list[["PH_READING"]]
   all_sv_data[["DO_CHECK"]] <- do_list[["DO_CHECK"]]
   all_sv_data[["DO_READING"]] <- do_list[["DO_READING"]]
+  all_sv_data[["WT_COMPARISON_CHECK"]] <- wt_list[["WT_COMPARISON_CHECK"]]
+  all_sv_data[["WT_MULTIPOINT_CHECK"]] <- wt_list[["WT_MULTIPOINT_CHECK"]]
+  all_sv_data[["WT_MULTIPOINT_READING"]] <- wt_list[["WT_MULTIPOINT_READING"]]
   all_sv_data[["CAL_TYPE"]] <- "MANUAL"
   
   return(all_sv_data)
@@ -768,7 +987,7 @@ combine_manual <- function(sc_list, tby_list, do_list, ph_list) {
 delete_everything <- function(dbcon) {
   
   tables <- c("PH_READING", "PH_CHECK", "DO_READING", "DO_CHECK", "TBY_READING", "TBY_CHECK", "SC_READING", "SC_CHECK",
-              "CALIBRATION", "SOURCE", "SENSOR")
+              "WT_MULTIPOINT_READING", "WT_MULTIPOINT_CHECK", "WT_COMPARISON_CHECK","CALIBRATION", "SOURCE", "SENSOR")
   
   for(i in tables) {
     statement <- paste("DELETE FROM", i)
