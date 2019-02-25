@@ -4,8 +4,6 @@ library(dplyr)
 source("tools.R")
 source("modules.R")
 
-parms <- c("Specific cond at 25C", "Turbidity, FNU", "Dissolved oxygen", "pH")
-
 ui <- dashboardPage(
   dashboardHeader(title = "Calibration Logbook"),
   
@@ -66,6 +64,10 @@ ui <- dashboardPage(
             manualPhInput("ph_check1"),
             verbatimTextOutput("ph_out")
           ),
+          tabPanel("WT",
+            manualWtInput("wt_check1"),
+            verbatimTextOutput("wt_out")
+          ),
           tabPanel("Record",
             h3("Record calibration"),
             actionButton("write_manual", "Record")
@@ -76,14 +78,18 @@ ui <- dashboardPage(
         box(
           h3("Find a calibration"),
           fluidRow(
-            column(4, selectInput("find_cal_parm", "Parameter", choices = parms)),
+            column(4, selectInput("find_cal_parm", "Parameter", choices=  
+                                    c("Specific cond at 25C", "Turbidity, FNU", "Dissolved oxygen", "pH",
+                                      "Temperature, water (comparison)", "Temperature, water (multi-point)"))),
             column(3, uiOutput("sensor_sn_ui")),
-            column(4, dateRangeInput("find_cal_dates", "Dates"))
+            column(4, uiOutput("select_dates_ui"))
           ),
-          uiOutput("select_calibration_ui"),
+          fluidRow(
+            column(3, uiOutput("select_calibration_ui"))
+          ),
           tableOutput("view_check_out"),
-          tableOutput("view_reading_out")
-        )
+          tableOutput("view_reading_out"),
+        width = 11)
       ),
       tabItem("export_data",
         box()        
@@ -179,6 +185,7 @@ server <- function(input, output, session) {
   tby_check <- callModule(manualTby, "tby_check1")
   do_check <- callModule(manualDo, "do_check1")
   ph_check <- callModule(manualPh, "ph_check1")
+  wt_check <- callModule(manualWt, "wt_check1")
   
   output$sc_out <- renderPrint({
     
@@ -204,9 +211,15 @@ server <- function(input, output, session) {
     
   })
   
+  output$wt_out <- renderPrint({
+    
+    print(wt_check())
+    
+  })
+  
   observeEvent(input$write_manual, {
       
-    combined_data <- combine_manual(sc_check(), tby_check(), do_check(), ph_check())
+    combined_data <- combine_manual(sc_check(), tby_check(), do_check(), ph_check(), wt_check())
     
     max_keys <- get_max_keys(dbcon)
     write_data <- combined_data %>%
@@ -229,9 +242,14 @@ server <- function(input, output, session) {
   output$sensor_sn_ui <- renderUI({
     
     sensors <- sensor_list()
+    
+    parameter <- input$find_cal_parm
+    if(parameter %in% c("Temperature, water (comparison)", "Temperature, water (multi-point)"))
+      parameter <- "Temperature, water"
+    
     if(input$find_cal_parm != "All") {
       sensors <- sensors %>%
-        filter(PARAMETER == input$find_cal_parm)
+        filter(PARAMETER == parameter)
     }
     sensor_sns <- pull(sensors, SENSOR_SN)
     
@@ -249,6 +267,10 @@ server <- function(input, output, session) {
       basetable <- c("DO_CHECK", "DO_READING")
     } else if(input$find_cal_parm == "pH") {
       basetable <- c("PH_CHECK", "PH_READING")
+    } else if(input$find_cal_parm == "Temperature, water (comparison)") {
+      basetable <- c("WT_COMPARISON_CHECK", "")
+    } else if(input$find_cal_parm == "Temperature, water (multi-point)") {
+      basetable <- c("WT_MULTIPOINT_CHECK", "WT_MULTIPOINT_READING")
     } else {
       basetable <- c("GEN_CHECK", "GEN_READING")
     }
@@ -288,6 +310,14 @@ server <- function(input, output, session) {
     
   })
   
+  output$select_dates_ui <- renderUI({
+    
+    start_date <- Sys.Date() - as.difftime(8760, units = "hours")
+    
+    dateRangeInput("find_cal_dates", "Dates", start = start_date)
+    
+  })
+  
   output$select_calibration_ui <- renderUI({
     
     selectizeInput("which_cal", "View data from", choices = calibration_list(), selected = NULL)
@@ -306,7 +336,8 @@ server <- function(input, output, session) {
     check_table <- tbl(dbcon, check_basetable) %>%
       filter(CAL_ID == input$which_cal)
     
-    reading_table <- tbl(dbcon, reading_basetable)
+    if(reading_basetable != "")
+      reading_table <- tbl(dbcon, reading_basetable)
     
     sensor_table <- tbl(dbcon, "SENSOR") %>%
       select(SENSOR_ID, SENSOR_SN)
@@ -318,12 +349,21 @@ server <- function(input, output, session) {
     check_table <- check_table %>%
       select(ends_with("_ID"))
     
-    reading <- check_table %>%
-      inner_join(reading_table) %>%
-      select(-ends_with("_ID"))
-    
-    out <- list(check, reading)
-    names(out) <- c("check","reading")
+    if(reading_basetable != "") {
+      
+      reading <- check_table %>%
+        inner_join(reading_table) %>%
+        select(-ends_with("_ID"))
+      out <- list(check, reading)
+      names(out) <- c("check","reading")
+      
+    } else {
+      
+      out <- list(check)
+      names(out) <- "check"
+      
+    }
+
     return(out)
     
   })
