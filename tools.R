@@ -443,11 +443,15 @@ get_WT_COMPARISON <- function(sv_xml) {
   
 }
 
-get_CAL_TYPE <- function(sv_xml) {
+get_CALIBRATION <- function(sv_xml) {
   
   cal_type <- "SITEVISIT"
+  monitor_sn <- xml_find_first(sv_xml, ".//MonitorInspection//SerialNumber") %>%
+    xml_text()
   
-  return(cal_type)
+  cal <- data.frame(MONITOR_SN = monitor_sn, CAL_TYPE = cal_type)
+  
+  return(cal)
   
 }
 
@@ -466,7 +470,7 @@ get_ALL <- function(sv_xml) {
   all_sv_data[["WT_COMPARISON_CHECK"]] <- get_WT_COMPARISON(sv_xml)
   all_sv_data[["WT_MULTIPOINT_CHECK"]] <- get_WT_MULTIPOINT_CHECK(sv_xml)
   all_sv_data[["WT_MULTIPOINT_READING"]] <- get_WT_MULTIPOINT_READING(sv_xml)
-  all_sv_data[["CAL_TYPE"]] <- get_CAL_TYPE(sv_xml)
+  all_sv_data[["CALIBRATION"]] <- get_CALIBRATION(sv_xml)
   
   return(all_sv_data)
   
@@ -490,10 +494,10 @@ add_keys <- function(all_sv_data, max_keys, source_file) {
     cal_date <- "1900-01-01"
   }
   
-  calibration <- data.frame(CAL_ID = 1 + max_keys["CAL_ID"], DATE = cal_date, 
-                            CAL_TYPE = all_sv_data[["CAL_TYPE"]], SOURCE_ID = source$SOURCE_ID,
-                            row.names=NULL)
-  all_sv_data[["CALIBRATION"]] <- calibration
+  all_sv_data[["CALIBRATION"]]$CAL_ID <- 1 + max_keys["CAL_ID"]
+  all_sv_data[["CALIBRATION"]]$DATE <- cal_date
+  all_sv_data[["CALIBRATION"]]$SOURCE_ID <- source$SOURCE_ID
+  calibration <- all_sv_data[["CALIBRATION"]]
   
   #Add keys to the sc check and readings
   if(nrow(all_sv_data[["SC_CHECK"]]) > 0) {
@@ -852,7 +856,7 @@ write_sv_data <- function(all_sv_data, dbcon) {
     select(SOURCE_ID, SOURCE_NAME, DATE_LOADED)
 
   write[["CALIBRATION"]] <- all_sv_data[["CALIBRATION"]] %>%
-    select(CAL_ID, DATE, CAL_TYPE, SOURCE_ID)
+    select(CAL_ID, DATE, MONITOR_SN, CAL_TYPE, SOURCE_ID)
 
   write[["SC_CHECK"]] <- all_sv_data[["SC_CHECK"]] %>%
     select(SC_ID, CAL_ID, SENSOR_ID, CELL_CONSTANT, AIR_READING, COMMENT)
@@ -910,7 +914,7 @@ write_sv_data <- function(all_sv_data, dbcon) {
   
 }
 
-combine_manual <- function(sc_list, tby_list, do_list, ph_list, wt_list) {
+combine_manual <- function(monitor_sn, sc_list, tby_list, do_list, ph_list, wt_list) {
   
   #Make a sensor data frame
   sc_check <- sc_list[["SC_CHECK"]]
@@ -977,7 +981,8 @@ combine_manual <- function(sc_list, tby_list, do_list, ph_list, wt_list) {
   all_sv_data[["WT_COMPARISON_CHECK"]] <- wt_list[["WT_COMPARISON_CHECK"]]
   all_sv_data[["WT_MULTIPOINT_CHECK"]] <- wt_list[["WT_MULTIPOINT_CHECK"]]
   all_sv_data[["WT_MULTIPOINT_READING"]] <- wt_list[["WT_MULTIPOINT_READING"]]
-  all_sv_data[["CAL_TYPE"]] <- "MANUAL"
+  all_sv_data[["CALIBRATION"]] <- data.frame(MONITOR_SN = monitor_sn,
+                                          CAL_TYPE = "MANUAL")
   
   return(all_sv_data)
   

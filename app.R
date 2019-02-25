@@ -43,6 +43,7 @@ ui <- dashboardPage(
       ),
       
       tabItem(tabName = "new_cal_manual",
+        textInput("monitor_sn", label = "Monitor serial number", placeholder = "12A34567"),
         tabBox(
           tabPanel("Specific cond at 25C",
             manualScInput("sc_check1"),
@@ -219,7 +220,8 @@ server <- function(input, output, session) {
   
   observeEvent(input$write_manual, {
       
-    combined_data <- combine_manual(sc_check(), tby_check(), do_check(), ph_check(), wt_check())
+    combined_data <- combine_manual(input$monitor_sn, sc_check(), tby_check(), do_check(), 
+                                    ph_check(), wt_check())
     
     max_keys <- get_max_keys(dbcon)
     write_data <- combined_data %>%
