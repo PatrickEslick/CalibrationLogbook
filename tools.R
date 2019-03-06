@@ -601,6 +601,9 @@ add_keys <- function(all_sv_data, max_keys, source_file) {
         1:nrow(all_sv_data[["WT_MULTIPOINT_READING"]])
       all_sv_data[["WT_MULTIPOINT_READING"]]$WTR_MULTIPOINT_ID <- 
         all_sv_data[["WT_MULTIPOINT_READING"]]$WTR_MULTIPOINT_ID + max_keys["WTR_MULTIPOINT_ID"]
+    } else {
+      all_sv_data[["WT_MULTIPOINT_READING"]]$WT_MULTIPOINT_ID <- vector()
+      all_sv_data[["WT_MULTIPOINT_READING"]]$WTR_MULTIPOINT_ID <- vector()
     }
     
   } else {
