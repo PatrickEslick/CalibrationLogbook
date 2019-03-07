@@ -1015,3 +1015,55 @@ empty_if_null <- function(x) {
   
 }
 
+get_cal_list <- function(parameter, serial_number, dbcon) {
+  #Find the basetable
+  if(parameter == "Specific cond at 25C") {
+    basetables <- c("SC_CHECK", "SC_READING", "SC_ID")
+  } else if (parameter == "Turbidity, FNU") {
+    basetables <- c("TBY_CHECK", "TBY_READING", "TBY_ID")
+  } else if (parameter == "Dissolved oxygen") {
+    basetables <- c("DO_CHECK", "DO_READING", "DO_ID")
+  } else if(parameter == "pH") {
+    basetables <- c("PH_CHECK", "PH_READING", "PH_ID")
+  } else if(parameter == "Temperature, water (comparison)") {
+    basetables <- c("WT_COMPARISON_CHECK", "")
+  } else if(parameter == "Temperature, water (multi-point)") {
+    basetables <- c("WT_MULTIPOINT_CHECK", "WT_MULTIPOINT_READING", "WT_MULTIPOINT_ID")
+  } else {
+    basetables <- c("GEN_CHECK", "GEN_READING")
+  }
+  
+  basetable <- basetables[1]
+  
+  sensor_id <- tbl(dbcon, "SENSOR") %>%
+    filter(SENSOR_SN == serial_number & PARAMETER == parameter) %>%
+    pull(SENSOR_ID)
+  
+  cal <- tbl(dbcon, "CALIBRATION") %>%
+    select(CAL_ID, DATE)
+  check <- tbl(dbcon, basetable) %>%
+    inner_join(cal) %>%
+    filter(SENSOR_ID == sensor_id) %>%
+    collect()
+  reading <- tbl(dbcon, basetables[2]) %>%
+    collect()
+  
+  cal_list <- list()
+  
+  for(i in check[,basetables[3],drop=TRUE]) {
+    
+    this_check <- list()
+    this_check[[1]] <- check %>%
+      filter(.data[[basetables[3]]] == i) %>%
+      select(-ends_with("_ID"))
+    this_check[[2]] <- reading %>%
+      filter(.data[[basetables[3]]] == i) %>%
+      select(-ends_with("_ID"))
+    
+    cal_list[[length(cal_list) + 1]] <- this_check
+    
+  }
+  
+  return(cal_list)
+}
+
