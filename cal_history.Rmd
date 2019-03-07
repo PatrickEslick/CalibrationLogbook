@@ -1,0 +1,32 @@
+---
+output: html_document
+params:
+  plot: NA
+  cal_list: NA
+---
+
+### Calibrations
+
+```{r echo = FALSE}
+
+print(params[["plot"]])
+
+```
+
+### Calibration data
+
+```{r, echo=FALSE, results = "asis", message=FALSE}
+
+cal_list <- params[["cal_list"]]
+
+for(i in 1:length(cal_list)) {
+  cat("<hr>\n")
+  print(kable(cal_list[[i]][[1]]))
+  cat("\n")
+  print(kable(cal_list[[i]][[2]]))
+  cat("\n")
+}
+
+
+```
+
