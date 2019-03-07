@@ -1,7 +1,10 @@
 library(shiny)
 library(shinydashboard)
 library(dplyr)
+library(ggplot2)
+library(knitr)
 source("tools.R")
+source("plotting.R")
 source("modules.R")
 
 ui <- dashboardPage(
@@ -14,7 +17,9 @@ ui <- dashboardPage(
         menuSubItem("Manual", tabName = "new_cal_manual")
       ),
       menuItem("View calibrations", tabName = "view_cal"),
-      menuItem("Export data", tabName = "export_data")
+      menuItem("Reports", startExpanded = TRUE,
+        menuSubItem("Probe history", tabName = "probe_history")
+      )
     )
   ),
   
@@ -92,8 +97,14 @@ ui <- dashboardPage(
           tableOutput("view_reading_out"),
         width = 11)
       ),
-      tabItem("export_data",
-        box()        
+      tabItem("probe_history",
+        box(
+          h3("Probe history report"),
+          selectInput("probe_history_parameter", label = "Parameter",
+                      choices = c("Specific cond at 25C", "Turbidity, FNU", "pH")),
+          uiOutput("probe_history_sn_choices"),
+          downloadButton("download_probe_history", "Get report")
+        )        
       )
     )
   )
@@ -381,6 +392,53 @@ server <- function(input, output, session) {
     selected_calibration_out()$reading
     
   })
+  
+  output$probe_history_sn_choices <- renderUI({
+    
+    serial_number_choices <- tbl(dbcon, "SENSOR") %>%
+      filter(PARAMETER == input$probe_history_parameter) %>%
+      pull(SENSOR_SN)
+    
+    selectInput("probe_history_sn", "Probe serial number", choices = serial_number_choices)
+    
+  })
+  
+  probe_history_plot <- reactive({
+    
+    plot <- error_history_plot(input$probe_history_parameter, input$probe_history_sn, dbcon)
+    plot
+    
+  })
+  
+  probe_history_cal_list <- reactive({
+    
+    cal_list <- get_cal_list(input$probe_history_parameter, input$probe_history_sn, dbcon)
+    print(cal_list)
+    cal_list
+    
+  })
+  
+  output$download_probe_history <- downloadHandler(
+    
+    filename = function() {
+      paste(input$probe_history_sn, ".html")
+    }, 
+    content = function(file) {
+      
+      
+      
+      temp_report <- file.path(tempdir(), "cal_history.Rmd")
+      file.copy("cal_history.Rmd", temp_report, overwrite = TRUE)
+      
+      params <- list(plot = probe_history_plot(), cal_list = probe_history_cal_list())
+      
+      rmarkdown::render(temp_report, output_file = file, 
+                        params = params,
+                        envir = new.env(parent = globalenv()))
+      
+    }
+  )
+  
   
 }
 
