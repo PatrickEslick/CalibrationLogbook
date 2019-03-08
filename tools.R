@@ -1044,6 +1044,7 @@ get_cal_list <- function(parameter, serial_number, dbcon) {
   check <- tbl(dbcon, basetable) %>%
     inner_join(cal) %>%
     filter(SENSOR_ID == sensor_id) %>%
+    arrange(DATE) %>%
     collect()
   reading <- tbl(dbcon, basetables[2]) %>%
     collect()
