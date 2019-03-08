@@ -10,18 +10,30 @@ error_history_plot_sc <- function(serial_number, dbcon) {
     head(1) %>%
     pull(SENSOR_ID)
   
-  readings <- tbl(dbcon, "SC_CHECK") %>%
+  all_readings <- tbl(dbcon, "SC_CHECK") %>%
     select(SC_ID, SENSOR_ID) %>%
     filter(SENSOR_ID == sensor_id) %>%
     inner_join(tbl(dbcon, "SC_READING"), by = "SC_ID") %>%
-    filter(STD_VALUE != 0 & TYPE == "CALI") %>%
+    filter(STD_VALUE != 0) %>%
     mutate(ERROR = ((READING - STD_VALUE) / STD_VALUE) * 100) %>%
     collect()
-  readings$DATETIME <- as.POSIXct(readings$DATETIME)
+  readings <- all_readings %>%
+    filter(TYPE == "CALI")
+  recal_dates <- all_readings %>%
+    filter(TYPE == "RECL") %>%
+    pull(DATETIME) %>%
+    as.POSIXct(format = "%Y-%m-%d %H:%M")
+  
+  recal_dates <- recal_dates[!is.na(recal_dates)]
+  recal_dates <- recal_dates[!duplicated(as.Date(recal_dates))]
+  readings$DATETIME <- as.POSIXct(readings$DATETIME, format = "%Y-%m-%d %H:%M")
   readings$STD_VALUE <- as.character(readings$STD_VALUE)
   
   ylimits <- c(max(abs(readings$ERROR), na.rm = TRUE) * -1.1, 
                max(abs(readings$ERROR), na.rm = TRUE) * 1.1)
+  if(ylimits[2] < 3)
+    ylimits <- c(-3.2, 3.2)
+  
   n_standards <- length(unique(readings$STD_VALUE))
   
   plot <- ggplot(data = readings) +
@@ -29,6 +41,7 @@ error_history_plot_sc <- function(serial_number, dbcon) {
                size = 3, shape = 17) + 
     scale_color_manual(values = color_scale(n_standards), name = "Standard") + 
     scale_y_continuous(limits = ylimits) +
+    scale_x_datetime() +
     geom_hline(yintercept = 0) +
     xlab("Date") +
     ylab("Percent error") +
@@ -43,6 +56,10 @@ error_history_plot_sc <- function(serial_number, dbcon) {
     plot <- plot + geom_hline(yintercept = c(30, -30), linetype = "dashed")
   }
   
+  if(length(recal_dates) > 0) {
+    plot <- plot + geom_vline(xintercept = recal_dates, linetype = "dotted")
+  }
+  
   return(plot)
   
 }
@@ -54,18 +71,30 @@ error_history_plot_tby <- function(serial_number, dbcon) {
     head(1) %>%
     pull(SENSOR_ID)
   
-  readings <- tbl(dbcon, "TBY_CHECK") %>%
+  all_readings <- tbl(dbcon, "TBY_CHECK") %>%
     select(TBY_ID, SENSOR_ID) %>%
     filter(SENSOR_ID == sensor_id) %>%
     inner_join(tbl(dbcon, "TBY_READING"), by = "TBY_ID") %>%
-    filter(STD_VALUE != 0 & TYPE == "CALI") %>%
+    filter(STD_VALUE != 0) %>%
     mutate(ERROR = ((READING - STD_VALUE) / STD_VALUE) * 100) %>%
     collect()
+  readings <- all_readings %>%
+    filter(TYPE == "CALI")
+  recal_dates <- all_readings %>%
+    filter(TYPE == "RECL") %>%
+    pull(DATETIME) %>%
+    as.POSIXct(format = "%Y-%m-%d %H:%M")
+  
+  recal_dates <- recal_dates[!is.na(recal_dates)]
+  recal_dates <- recal_dates[!duplicated(as.Date(recal_dates))]
   readings$DATETIME <- as.POSIXct(readings$DATETIME)
   readings$STD_VALUE <- as.character(readings$STD_VALUE)
   
   ylimits <- c(max(abs(readings$ERROR), na.rm = TRUE) * -1.1, 
                max(abs(readings$ERROR), na.rm = TRUE) * 1.1)
+  if(ylimits[2] < 5)
+    ylimits <- c(-5.2, 5.2)
+  
   n_standards <- length(unique(readings$STD_VALUE))
   
   plot <- ggplot(data = readings) +     
@@ -73,6 +102,7 @@ error_history_plot_tby <- function(serial_number, dbcon) {
                size = 3, shape = 17) + 
     scale_color_manual(values = color_scale(n_standards), name = "Standard") + 
     scale_y_continuous(limits = ylimits) +
+    scale_x_datetime() +
     geom_hline(yintercept = 0) +
     xlab("Date") +
     ylab("Percent error") +
@@ -85,6 +115,10 @@ error_history_plot_tby <- function(serial_number, dbcon) {
   
   if(ylimits[2] > 30) {
     plot <- plot + geom_hline(yintercept = c(30, -30), linetype = "dashed")
+  }
+  
+  if(length(recal_dates) > 0) {
+    plot <- plot + geom_vline(xintercept = recal_dates, linetype = "dotted")
   }
   
   return(plot)
@@ -111,18 +145,30 @@ error_history_plot_ph <- function(serial_number, dbcon) {
     head(1) %>%
     pull(SENSOR_ID)
   
-  readings <- tbl(dbcon, "PH_CHECK") %>%
+  all_readings <- tbl(dbcon, "PH_CHECK") %>%
     select(PH_ID, SENSOR_ID) %>%
     filter(SENSOR_ID == sensor_id) %>%
     inner_join(tbl(dbcon, "PH_READING"), by = "PH_ID") %>%
-    filter(STD_VALUE != 0 & TYPE == "CALI") %>%
+    filter(STD_VALUE != 0) %>%
     mutate(ERROR = READING - STD_VALUE) %>%
     collect()
+  readings <- all_readings %>%
+    filter(TYPE == "CALI")
+  recal_dates <- all_readings %>%
+    filter(TYPE == "RECL") %>%
+    pull(DATETIME) %>%
+    as.POSIXct(format = "%Y-%m-%d %H:%M")
+  
+  recal_dates <- recal_dates[!is.na(recal_dates)]
+  recal_dates <- recal_dates[!duplicated(as.Date(recal_dates))]
   readings$DATETIME <- as.POSIXct(readings$DATETIME)
   readings$STD_VALUE <- as.character(which_ph_std(readings$STD_VALUE))
   
   ylimits <- c(max(abs(readings$ERROR), na.rm = TRUE) * -1.1, 
                max(abs(readings$ERROR), na.rm = TRUE) * 1.1)
+  if(ylimits[2] < 0.2)
+    ylimits <- c(-0.23, 0.23)
+  
   n_standards <- length(unique(readings$STD_VALUE))
   
   plot <- ggplot(data = readings) +     
@@ -130,6 +176,7 @@ error_history_plot_ph <- function(serial_number, dbcon) {
                size = 3, shape = 17) + 
     scale_color_manual(values = color_scale(n_standards), name = "Standard") + 
     scale_y_continuous(limits = ylimits) +
+    scale_x_datetime() +
     geom_hline(yintercept = 0) +
     xlab("Date") +
     ylab("Absolute error") +
@@ -141,6 +188,10 @@ error_history_plot_ph <- function(serial_number, dbcon) {
   
   if(ylimits[2] > 2) {
     plot <- plot + geom_hline(yintercept = c(2, -2), linetype = "dashed")
+  }
+  
+  if(length(recal_dates) > 0) {
+    plot <- plot + geom_vline(xintercept = recal_dates, linetype = "dotted")
   }
   
   return(plot)
