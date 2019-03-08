@@ -7,7 +7,7 @@ params:
 
 ### Calibrations
 
-```{r echo = FALSE}
+```{r echo = FALSE, warnings = FALSE}
 
 print(params[["plot"]])
 

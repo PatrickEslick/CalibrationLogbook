@@ -101,7 +101,7 @@ ui <- dashboardPage(
         box(
           h3("Probe history report"),
           selectInput("probe_history_parameter", label = "Parameter",
-                      choices = c("Specific cond at 25C", "Turbidity, FNU", "pH")),
+                      choices = c("Specific cond at 25C", "Turbidity, FNU", "pH", "Dissolved oxygen")),
           uiOutput("probe_history_sn_choices"),
           downloadButton("download_probe_history", "Get report")
         )        

@@ -198,6 +198,60 @@ error_history_plot_ph <- function(serial_number, dbcon) {
   
 }
 
+error_history_plot_do <- function(serial_number, dbcon) {
+  
+  sensor_id <- tbl(dbcon, "SENSOR") %>%
+    filter(SENSOR_SN == serial_number & PARAMETER == "Dissolved oxygen") %>%
+    head(1) %>%
+    pull(SENSOR_ID)
+  
+  all_readings <- tbl(dbcon, "DO_CHECK") %>%
+    select(DO_ID, SENSOR_ID) %>%
+    filter(SENSOR_ID == sensor_id) %>%
+    inner_join(tbl(dbcon, "DO_READING"), by = "DO_ID") %>%
+    mutate(ERROR = ((READING - DO_TABLE_VALUE) / DO_TABLE_VALUE) * 100) %>%
+    collect()
+  readings <- all_readings %>%
+    filter(TYPE == "CALI")
+  recal_dates <- all_readings %>%
+    filter(TYPE == "RECL") %>%
+    pull(DATETIME) %>%
+    as.POSIXct(format = "%Y-%m-%d %H:%M")
+  
+  recal_dates <- recal_dates[!is.na(recal_dates)]
+  recal_dates <- recal_dates[!duplicated(as.Date(recal_dates))]
+  readings$DATETIME <- as.POSIXct(readings$DATETIME)
+  
+  ylimits <- c(max(abs(readings$ERROR), na.rm = TRUE) * -1.1, 
+               max(abs(readings$ERROR), na.rm = TRUE) * 1.1)
+  if(ylimits[2] < 5)
+    ylimits <- c(-5.2, 5.2)
+  
+  plot <- ggplot(data = readings) +     
+    geom_point(aes(x = DATETIME, y = ERROR),
+               size = 3, shape = 17, color = "#e41a1c") + 
+    scale_y_continuous(limits = ylimits) +
+    scale_x_datetime() +
+    geom_hline(yintercept = 0) +
+    xlab("Date") +
+    ylab("Percent error") +
+    ggtitle("Calibration history", subtitle = paste(serial_number, "Dissolved oxygen", sep = ", "))
+  
+  if(ylimits[2] > 0.2) {
+    plot <- plot + geom_hline(yintercept = c(5, -5), linetype = "dashed")
+  }
+  
+  if(ylimits[2] > 20) {
+    plot <- plot + geom_hline(yintercept = c(20, -20), linetype = "dashed")
+  }
+  
+  if(length(recal_dates) > 0) {
+    plot <- plot + geom_vline(xintercept = recal_dates, linetype = "dotted")
+  }
+  
+  return(plot)
+  
+}
 
 error_history_plot <- function(parameter, serial_number, dbcon) {
   if(parameter == "Specific cond at 25C") {
@@ -206,5 +260,7 @@ error_history_plot <- function(parameter, serial_number, dbcon) {
     error_history_plot_tby(serial_number, dbcon)
   } else if(parameter == "pH") {
     error_history_plot_ph(serial_number, dbcon)
+  } else if(parameter == "Dissolved oxygen") {
+    error_history_plot_do(serial_number, dbcon)
   }
 }
