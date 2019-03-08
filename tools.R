@@ -94,16 +94,18 @@ get_SC_READING <- function(sv_xml) {
       as.character(format = "%Y-%m-%d %H:%M:%S")
     TYPE <- xml_find_first(sc_readings, ".//CalibrationCode") %>%
       xml_text()
+    USED_FOR_RECAL <- xml_find_first(sc_readings, ".//UsedForRecalibration") %>%
+      xml_text()
     
     sc_reading_df <- data.frame(STD_VALUE, STD_EXPIRATION, STD_TYPE, STD_LOT, READING,
-                                TEMPERATURE, DATETIME, TYPE,
+                                TEMPERATURE, DATETIME, TYPE, USED_FOR_RECAL,
                                 stringsAsFactors = FALSE)
     
   } else {
     
     sc_reading_df <- data.frame(STD_VALUE = vector(), STD_EXPIRATION = vector(), STD_TYPE = vector(),
                                 STD_LOT = vector(), READING = vector(), TEMPERATURE = vector(),
-                                DATETIME = vector(), TYPE = vector())
+                                DATETIME = vector(), TYPE = vector(), USED_FOR_RECAL = vector())
     
   }
   
@@ -163,16 +165,18 @@ get_TBY_READING <- function(sv_xml) {
       as.character(format= "%Y-%m-%d %H:%M:%S")
     TYPE <- xml_find_first(tby_readings, ".//CalibrationCode") %>%
       xml_text()
+    USED_FOR_RECAL <- xml_find_first(tby_readings, ".//UsedForRecalibration") %>%
+      xml_text()
     
     tby_reading_df <- data.frame(STD_VALUE, STD_EXPIRATION, STD_TYPE, STD_LOT, READING,
-                                 TEMPERATURE, DATETIME, TYPE,
+                                 TEMPERATURE, DATETIME, TYPE, USED_FOR_RECAL,
                                  stringsAsFactors = FALSE)
     
   } else {
     tby_reading_df <- data.frame(STD_VALUE = vector(), STD_EXPIRATION = vector(),
                                  STD_TYPE = vector(), STD_LOT = vector(), 
                                  READING = vector(), TEMPERATURE =  vector(),
-                                 DATETIME = vector(), TYPE = vector())
+                                 DATETIME = vector(), TYPE = vector(), USED_FOR_RECAL = vector())
   }
   
   return(tby_reading_df)
@@ -322,9 +326,11 @@ get_PH_READING <- function(sv_xml) {
       xml_text()
     TYPE <- xml_find_first(ph_readings, ".//CalibrationCode") %>%
       xml_text()
+    USED_FOR_RECAL <- xml_find_first(ph_readings, ".//UsedForRecalibration") %>%
+      xml_text()
     
     ph_reading_df <- data.frame(STD_UNCORRECTED, STD_EXPIRATION, STD_TYPE, STD_LOT, TEMPERATURE, 
-                                STD_VALUE, READING, DATETIME, MILLIVOLTS, TYPE,
+                                STD_VALUE, READING, DATETIME, MILLIVOLTS, TYPE, USED_FOR_RECAL,
                                 stringsAsFactors = FALSE)
     
   } else {
@@ -332,7 +338,8 @@ get_PH_READING <- function(sv_xml) {
     ph_reading_df <- data.frame(STD_UNCORRECTED = vector(), STD_EXPIRATION = vector(), 
                                 STD_TYPE = vector(), STD_LOT = vector(),
                                 TEMPERATURE = vector(), STD_VALUE = vector(), READING = vector(),
-                                DATETIME = vector(), MILLIVOLTS = vector(), TYPE = vector())
+                                DATETIME = vector(), MILLIVOLTS = vector(), TYPE = vector(),
+                                USED_FOR_RECALIBRATION = vector())
     
   }
   
@@ -866,14 +873,14 @@ write_sv_data <- function(all_sv_data, dbcon) {
 
   write[["SC_READING"]] <- all_sv_data[["SC_READING"]] %>%
     select(SCR_ID, SC_ID, STD_VALUE, STD_EXPIRATION, STD_TYPE, STD_LOT, READING,
-           TEMPERATURE, DATETIME, TYPE)
+           TEMPERATURE, DATETIME, TYPE, USED_FOR_RECAL)
 
   write[["TBY_CHECK"]] <- all_sv_data[["TBY_CHECK"]] %>%
     select(TBY_ID, CAL_ID, SENSOR_ID, SENSOR_LIMIT, COMMENT)
 
   write[["TBY_READING"]] <- all_sv_data[["TBY_READING"]] %>%
     select(TBYR_ID, TBY_ID, STD_VALUE, STD_EXPIRATION, STD_TYPE, STD_LOT, READING,
-           TEMPERATURE, DATETIME, TYPE)
+           TEMPERATURE, DATETIME, TYPE, USED_FOR_RECAL)
 
   write[["DO_CHECK"]] <- all_sv_data[["DO_CHECK"]] %>%
     select(DO_ID, CAL_ID, SENSOR_ID, SC_AIR_SATURATED_WATER, TEMP_AIR_SATURATED_WATER,
@@ -889,7 +896,7 @@ write_sv_data <- function(all_sv_data, dbcon) {
 
   write[["PH_READING"]] <- all_sv_data[["PH_READING"]] %>%
     select(PHR_ID, PH_ID, STD_UNCORRECTED, STD_TYPE, STD_LOT, TEMPERATURE, STD_VALUE, READING,
-           DATETIME, MILLIVOLTS, TYPE)
+           DATETIME, MILLIVOLTS, TYPE, USED_FOR_RECAL)
   
   write[["WT_COMPARISON_CHECK"]] <- all_sv_data[["WT_COMPARISON_CHECK"]] %>%
     select(WT_COMP_ID, CAL_ID, SENSOR_ID, FIELD_SENSOR_SN, DATETIME, CHECK_MEASURE,

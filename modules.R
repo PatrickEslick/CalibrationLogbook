@@ -72,7 +72,8 @@ manualSc <- function(input, output, session) {
         column(1, textInput(ns(paste0("a_reading", i)), label = "Reading")),
         column(1, textInput(ns(paste0("a_temperature", i)), label = "Temperature")),
         column(1, textInput(ns(paste0("a_datetime", i)), label = "Date/Time",
-                            value = as.character(Sys.time(), format="%Y-%m-%d %H:%M")))
+                            value = as.character(Sys.time(), format="%Y-%m-%d %H:%M"))),
+        column(1, checkboxInput(ns(paste0("a_used", i)), label = "Used for recal"))
       )
     })
   })
@@ -111,6 +112,7 @@ manualSc <- function(input, output, session) {
     TEMPERATURE <- vector()
     DATETIME <- vector()
     TYPE <- vector()
+    USED_FOR_RECAL <- vector()
     
     # Get the before data
     for(i in 1:input$reading_count_before) {
@@ -125,6 +127,7 @@ manualSc <- function(input, output, session) {
           TEMPERATURE[length(TEMPERATURE) + 1] <- empty_if_null(input[[paste0("b_temperature", i)]])
           DATETIME[length(DATETIME) + 1] <- empty_if_null(input[[paste0("b_datetime", i)]])
           TYPE[length(TYPE) + 1] <- "CALI"
+          USED_FOR_RECAL[length(USED_FOR_RECAL) + 1] <- FALSE
         }
       }
       
@@ -143,13 +146,14 @@ manualSc <- function(input, output, session) {
           TEMPERATURE[length(TEMPERATURE) + 1] <- empty_if_null(input[[paste0("a_temperature", i)]])
           DATETIME[length(DATETIME) + 1] <- empty_if_null(input[[paste0("a_datetime", i)]])
           TYPE[length(TYPE) + 1] <- "RECL"
+          USED_FOR_RECAL[length(USED_FOR_RECAL) + 1] <- input[[paste0("a_used", i)]]
         }
       }
       
     }
     
     sc_reading_df <- data.frame(STD_VALUE, STD_EXPIRATION, STD_TYPE, STD_LOT, READING, TEMPERATURE, 
-                                DATETIME, TYPE, stringsAsFactors = FALSE)
+                                DATETIME, TYPE, USED_FOR_RECAL, stringsAsFactors = FALSE)
     
     list_out <- list(SC_CHECK = sc_check_df, SC_READING = sc_reading_df)
     
@@ -229,7 +233,8 @@ manualTby <- function(input, output, session) {
         column(1, textInput(ns(paste0("a_reading", i)), label = "Reading")),
         column(1, textInput(ns(paste0("a_temperature", i)), label = "Temperature")),
         column(1, textInput(ns(paste0("a_datetime", i)), label = "Date/Time",
-                            value = as.character(Sys.time(), format="%Y-%m-%d %H:%M")))
+                            value = as.character(Sys.time(), format="%Y-%m-%d %H:%M"))),
+        column(1, checkboxInput(ns(paste0("a_used", i)), label = "Used for recal"))
       )
     })
     
@@ -268,6 +273,7 @@ manualTby <- function(input, output, session) {
     TEMPERATURE <- vector()
     DATETIME <- vector()
     TYPE <- vector()
+    USED_FOR_RECAL <- vector()
     
     # Get the before data
     for(i in 1:input$reading_count_before) {
@@ -282,6 +288,7 @@ manualTby <- function(input, output, session) {
           TEMPERATURE[length(TEMPERATURE) + 1] <- empty_if_null(input[[paste0("b_temperature", i)]])
           DATETIME[length(DATETIME) + 1] <- empty_if_null(input[[paste0("b_datetime", i)]])
           TYPE[length(TYPE) + 1] <- "CALI"
+          USED_FOR_RECAL[length(USED_FOR_RECAL) + 1] <- FALSE
         }
       }
       
@@ -300,13 +307,14 @@ manualTby <- function(input, output, session) {
           TEMPERATURE[length(TEMPERATURE) + 1] <- empty_if_null(input[[paste0("a_temperature", i)]])
           DATETIME[length(DATETIME) + 1] <- empty_if_null(input[[paste0("a_datetime", i)]])
           TYPE[length(TYPE) + 1] <- "RECL"
+          USED_FOR_RECAL[length(USED_FOR_RECAL) + 1] <- input[[paste0("a_used", i)]]
         }
       }
       
     }
     
     tby_reading_df <- data.frame(STD_VALUE, STD_EXPIRATION, STD_TYPE, STD_LOT, READING, TEMPERATURE, 
-                                DATETIME, TYPE, stringsAsFactors = FALSE)
+                                DATETIME, TYPE, USED_FOR_RECAL, stringsAsFactors = FALSE)
     
     list_out <- list(TBY_CHECK = tby_check_df, TBY_READING = tby_reading_df)
     
@@ -540,7 +548,8 @@ manualPh <- function(input, output, session) {
         column(1, textInput(ns(paste0("a_reading", i)), label = "Reading")),
         column(1, textInput(ns(paste0("a_millivolts", i)), label = "Millivolts")),
         column(1, textInput(ns(paste0("a_datetime", i)), label = "Datetime",
-                            value = as.character(Sys.time(), format="%Y-%m-%d %H:%M")))
+                            value = as.character(Sys.time(), format="%Y-%m-%d %H:%M"))),
+        column(1, checkboxInput(ns(paste0("a_used", i)), label = "Used for recal"))
       )
     })
     
@@ -577,6 +586,7 @@ manualPh <- function(input, output, session) {
     DATETIME <- vector()
     MILLIVOLTS <- vector()
     TYPE <- vector()
+    USED_FOR_RECAL <- vector()
     
     # Get the before data
     for(i in 1:input$reading_count_before) {
@@ -593,6 +603,7 @@ manualPh <- function(input, output, session) {
           DATETIME[length(DATETIME) + 1] <- empty_if_null(input[[paste0("b_datetime", i)]])
           MILLIVOLTS[length(MILLIVOLTS) + 1] <- empty_if_null(input[[paste0("b_millivolts", i)]])
           TYPE[length(TYPE) + 1] <- "CALI"
+          USED_FOR_RECAL[length(USED_FOR_RECAL) + 1] <- FALSE
         }
       }
       
@@ -613,13 +624,14 @@ manualPh <- function(input, output, session) {
           DATETIME[length(DATETIME) + 1] <- empty_if_null(input[[paste0("a_datetime", i)]])
           MILLIVOLTS[length(MILLIVOLTS) + 1] <- empty_if_null(input[[paste0("a_millivolts", i)]])
           TYPE[length(TYPE) + 1] <- "RECL"
+          USED_FOR_RECAL[length(USED_FOR_RECAL) + 1] <- input[[paste0("a_used", i)]]
         }
       }
       
     }
     
     ph_reading_df <- data.frame(STD_UNCORRECTED, STD_EXPIRATION, STD_TYPE, STD_LOT, TEMPERATURE, STD_VALUE, READING,
-                                DATETIME, MILLIVOLTS, TYPE, stringsAsFactors = FALSE)
+                                DATETIME, MILLIVOLTS, TYPE, USED_FOR_RECAL, stringsAsFactors = FALSE)
     
     list_out <- list(PH_CHECK = ph_check_df, PH_READING = ph_reading_df)
     
