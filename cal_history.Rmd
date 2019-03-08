@@ -13,7 +13,7 @@ print(params[["plot"]])
 
 ```
 
-Horizontal dashed lines show the calibration criteria and maximum allowable limit. 
+Horizontal dashed lines show the calibration criteria and maximum allowable limit.  
 Vertical dotted lines show when the sensor was recalibrated.
 
 ### Calibration data
