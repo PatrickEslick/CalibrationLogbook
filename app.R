@@ -104,6 +104,9 @@ ui <- dashboardPage(
               conditionalPanel("input.find_cal_parm == 'Specific cond at 25C'",
                 manualScInput("sc_edit")
               ),
+              conditionalPanel("input.find_cal_parm == 'Turbidity, FNU'",
+                manualTbyInput("tby_edit")
+              ),
               actionButton("update", "Update")
             )
           ),
@@ -209,7 +212,10 @@ server <- function(input, output, session) {
                          sn = reactive(NULL), 
                          selected_check = reactive(NULL), 
                          selected_readings = reactive(NULL))
-  tby_check <- callModule(manualTby, "tby_check1")
+  tby_check <- callModule(manualTby, "tby_check1",
+                          sn = reactive(NULL),
+                          selected_check = reactive(NULL),
+                          selected_readings = reactive(NULL))
   do_check <- callModule(manualDo, "do_check1")
   ph_check <- callModule(manualPh, "ph_check1")
   wt_check <- callModule(manualWt, "wt_check1")
@@ -439,10 +445,14 @@ server <- function(input, output, session) {
     
   })
 
-  sc_edit <- callModule(manualSc, "sc_edit", 
+  sc_edit <- callModule(manualSc, "sc_edit",
                         sn = reactive(input$find_cal_sn),
                         selected_check = reactive(check()),
                         selected_readings = reactive(readings()))
+  tby_edit <- callModule(manualTby, "tby_edit",
+                         sn = reactive(input$find_cal_sn),
+                         selected_check = reactive(check()),
+                         selected_readings = reactive(readings()))
   
   observeEvent(input$update, {
 
@@ -525,7 +535,6 @@ server <- function(input, output, session) {
   probe_history_cal_list <- reactive({
     
     cal_list <- get_cal_list(input$probe_history_parameter, input$probe_history_sn, dbcon)
-    print(cal_list)
     cal_list
     
   })

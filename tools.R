@@ -1108,12 +1108,18 @@ update <- function(parameter, check, readings, dbcon) {
     check_id <- "SC_ID"
     reading_id <- "SCR_ID"
   } else if(parameter == "Turbidity, FNU") {
+    check_table <- "TBY_CHECK"
+    reading_table <- "TBY_READING"
     check_id <- "TBY_ID"
     reading_id <- "TBYR_ID"
   } else if(parameter == "Dissolved oxygen") {
+    check_table <- "DO_CHECK"
+    reading_table <- "DO_READING"
     check_id <- "DO_ID"
     reading_id <- "DOR_ID"
   } else if(parameter == "pH") {
+    check_table <- "PH_CHECK"
+    reading_table <- "PH_READING"
     check_id <- "PH_ID"
     reading_id <- "PHR_ID"
   } else if(parameter == "Temperature, water (comparison)") {
