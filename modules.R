@@ -62,6 +62,8 @@ manualSc <- function(input, output, session, sn = NULL, selected_check = NULL, s
     
   })
   
+  outputOptions(output, "sensor_sn_ui", suspendWhenHidden = FALSE)
+  
   output$cell_constant_ui <- renderUI({
     
     ns <- session$ns
@@ -75,9 +77,11 @@ manualSc <- function(input, output, session, sn = NULL, selected_check = NULL, s
       val <- check$CELL_CONSTANT
     }
     
-    textInput(ns("sc_air_reading"), label = "Reading in air", value = val)
+    textInput(ns("sc_cell_constant"), label = "Reading in air", value = val)
     
   })
+  
+  outputOptions(output, "cell_constant_ui", suspendWhenHidden = FALSE)
   
   output$air_reading_ui <- renderUI({
     
@@ -92,9 +96,11 @@ manualSc <- function(input, output, session, sn = NULL, selected_check = NULL, s
       val <- check$AIR_READING
     }
     
-    textInput(ns("sc_cell_constant"), label = "Cell constant", value = val)
+    textInput(ns("sc_air_reading"), label = "Cell constant", value = val)
     
   })
+  
+  outputOptions(output, "air_reading_ui", suspendWhenHidden = FALSE)
   
   output$comment_ui <- renderUI({
     
@@ -112,6 +118,8 @@ manualSc <- function(input, output, session, sn = NULL, selected_check = NULL, s
     textInput(ns("sc_comment"), "Comment", width = "65%", val = val)
     
   })
+  
+  outputOptions(output, "comment_ui", suspendWhenHidden = FALSE)
   
   output$before_slider_ui <- renderUI({
     
@@ -154,8 +162,6 @@ manualSc <- function(input, output, session, sn = NULL, selected_check = NULL, s
   })
   
   outputOptions(output, "after_slider_ui", suspendWhenHidden = FALSE)
-  
-  
   
   output$sc_reading_before_ui <- renderUI({
     
@@ -422,6 +428,8 @@ manualTby <- function(input, output, session, sn = NULL, selected_check = NULL, 
     
   })
   
+  outputOptions(output, "sensor_sn_ui", suspendWhenHidden = FALSE)
+  
   output$sensor_limit_ui <- renderUI({
     
     ns <- session$ns
@@ -437,6 +445,8 @@ manualTby <- function(input, output, session, sn = NULL, selected_check = NULL, 
     
   })
   
+  outputOptions(output, "sensor_limit_ui", suspendWhenHidden = FALSE)
+  
   output$comment_ui <- renderUI({
     
     ns <- session$ns
@@ -451,6 +461,8 @@ manualTby <- function(input, output, session, sn = NULL, selected_check = NULL, 
     textInput(ns("tby_comment"), "Comment", width = "65%", value = val)  
     
   })
+  
+  outputOptions(output, "comment_ui", suspendWhenHidden = FALSE)
   
   output$before_slider_ui <- renderUI({
     
@@ -708,64 +720,288 @@ manualDoInput <- function(id) {
   ns <- NS(id)
   
   tagList(
-    textInput(ns("do_sensor_sn"), "Sensor serial number", placeholder = "12A34567"),
+    fluidRow(
+      column(2, uiOutput(ns("sensor_sn_ui")))
+    ),
     fluidRow(
       column(3,
-        textInput(ns("do_sc_air_saturated_water"), "SC of air saturated water")
+        uiOutput(ns("do_sc_air_saturated_water_ui"))
       ),
       column(3,
-        textInput(ns("do_temp_air_saturated_water"), "Temperature of air saturated water")       
+        uiOutput(ns("do_temp_air_saturated_water_ui"))       
       ),
       column(3,
-        textInput(ns("do_salinity"), "Salinity")       
+        uiOutput(ns("do_salinity_ui"))       
       )
     ),
     fluidRow(
       column(2,
-        textInput(ns("do_odo_gain_pre"), "ODO gain")
+        uiOutput(ns("do_odo_gain_pre_ui"))
       ),
       column(2,
-        textInput(ns("do_odo_gain_post"), "Post-calibration ODO gain")       
+        uiOutput(ns("do_odo_gain_post_ui"))       
       ),
       column(2,
-        checkboxInput(ns("do_odo_cap_changed"), "ODO cap changed")       
+        uiOutput(ns("do_odo_cap_changed_ui"))       
       ),
       column(2,
-        textInput(ns("do_odo_cap_sn"), "ODO cap serial")       
+        uiOutput(ns("do_odo_cap_sn_ui"))       
       )
     ),
-    textInput(ns("do_date_barometer_calibrated"), "Date barometer calibrated"),
-    textInput(ns("do_comment"), "Comment", width = "65%"),
+    fluidRow(
+      column(2, uiOutput(ns("do_date_barometer_calibrated_ui")))
+    ),
+    fluidRow(
+      column(2, uiOutput(ns("do_comment_ui")))
+    ),
     tabsetPanel(
       tabPanel("Calibration",
-        column(1, textInput(ns("b_temperature"), "Temperature (C)")),
-        column(1, textInput(ns("b_pressure"), "Pressure (mmHg)")),
-        column(1, textInput(ns("b_salinity_correction"), "Salinity corection", value = "1")),
-        column(1, textInput(ns("b_do_table_value"), "DO table value")),
-        column(1, textInput(ns("b_reading"), "Reading")),
-        column(1, textInput(ns("b_datetime"), "Datetime",
-                            value = as.character(Sys.time(), format="%Y-%m-%d %H:%M"))),
-        column(1, textInput(ns("b_zero_reading"), "Reading in zero soln."))
+        uiOutput(ns("before_ui"))
       ),
       tabPanel("Post-calibration",
-        column(1, textInput(ns("a_temperature"), "Temperature (C)")),
-        column(1, textInput(ns("a_pressure"), "Pressure (mmHg)")),
-        column(1, textInput(ns("a_salinity_correction"), "Salinity corection", value = "1")),
-        column(1, textInput(ns("a_do_table_value"), "DO table value")),
-        column(1, textInput(ns("a_reading"), "Reading")),
-        column(1, textInput(ns("a_datetime"), "Datetime",
-                           value = as.character(Sys.time(), format="%Y-%m-%d %H:%M"))),
-        column(1, textInput(ns("a_zero_reading"), "Reading in zero soln."))        
+        uiOutput(ns("after_ui") )
       )
     )
   )
   
 }
 
-manualDo <- function(input, output, session) {
+manualDo <- function(input, output, session, sn = NULL, selected_check = NULL, selected_readings = NULL) {
+  
+  output$sensor_sn_ui <- renderUI({
+    
+    ns <- session$ns
+    
+    if(!is.null(sn())) {
+      val <- sn()
+    } else {
+      val <- ""
+    }
+    
+    textInput(ns("do_sensor_sn"), "Sensor serial number", placeholder = "12A34567", value = val)
+    
+  })
+  outputOptions(output, "sensor_sn_ui", suspendWhenHidden = FALSE)
+  
+  output$do_sc_air_saturated_water_ui <- renderUI({
+    
+    ns <- session$ns
+    check <- selected_check()
+    if(!is.null(check)) {
+      val <- check$SC_AIR_SATURATED_WATER 
+    } else {
+      val <- ""
+    }
+    
+    textInput(ns("do_sc_air_saturated_water"), "SC of air saturated water", value = val)
+    
+  })
+  
+  outputOptions(output, "do_sc_air_saturated_water_ui", suspendWhenHidden = FALSE)
+  
+  output$do_temp_air_saturated_water_ui <- renderUI({
+    
+    ns <- session$ns
+    check <- selected_check()
+    if(!is.null(check)) {
+      val <- check$TEMP_AIR_SATURATED_WATER
+    } else {
+      val <- ""
+    }
+    
+    textInput(ns("do_temp_air_saturated_water"), "Temperature of air saturated water", value = val)
+    
+  })
+  
+  outputOptions(output, "do_temp_air_saturated_water_ui", suspendWhenHidden = FALSE)
+  
+  output$do_salinity_ui <- renderUI({
+    
+    ns <- session$ns
+    check <- selected_check()
+    if(!is.null(check)) {
+      val <- check$SALINITY 
+    } else {
+      val <- ""
+    }
+    
+    textInput(ns("do_salinity"), "Salinity", value = val)
+    
+  })
+  
+  outputOptions(output, "do_salinity_ui", suspendWhenHidden = FALSE)
+  
+  output$do_odo_gain_pre_ui <- renderUI({
+    
+    ns <- session$ns
+    check <- selected_check()
+    if(!is.null(check)) {
+      val <- check$ODO_GAIN_PRE
+    } else {
+      val <- ""
+    }
+    
+    textInput(ns("do_odo_gain_pre"), "ODO gain", value = val)
+    
+  })
+  
+  outputOptions(output, "do_odo_gain_pre_ui", suspendWhenHidden = FALSE)
+  
+  output$do_odo_gain_post_ui <- renderUI({
+    
+    ns <- session$ns
+    check <- selected_check()
+    if(!is.null(check)) {
+      val <- check$ODO_GAIN_POST 
+    } else {
+      val <- ""
+    }
+    
+    textInput(ns("do_odo_gain_post"), "Post-calibration ODO gain", value = val) 
+    
+  })
+  
+  outputOptions(output, "do_odo_gain_post_ui", suspendWhenHidden = FALSE)
+  
+  output$do_odo_cap_changed_ui <- renderUI({
+    
+    ns <- session$ns
+    check <- selected_check()
+    if(!is.null(check)) {
+      val <- as.logical(check$ODO_CAP_CHANGED)
+    } else {
+      val <- FALSE
+    }
+
+    checkboxInput(ns("do_odo_cap_changed"), "ODO cap changed", value = false_if_null(val))
+    
+  })
+  
+  outputOptions(output, "do_odo_cap_changed_ui", suspendWhenHidden = FALSE)
+  
+  output$do_odo_cap_sn_ui <- renderUI({
+    
+    ns <- session$ns
+    check <- selected_check()
+    if(!is.null(check)) {
+      val <- check$ODO_CAP_SN
+    } else {
+      val <- ""
+    }
+    
+    textInput(ns("do_odo_cap_sn"), "ODO cap serial", value = val)  
+    
+  })
+  
+  outputOptions(output, "do_odo_cap_sn_ui", suspendWhenHidden = FALSE)
+  
+  output$do_date_barometer_calibrated_ui <- renderUI({
+    
+    ns <- session$ns
+    check <- selected_check()
+    if(!is.null(check)) {
+      val <- check$DATE_BAROMETER_CALIBRATED
+    } else {
+      val <- ""
+    }
+  
+    textInput(ns("do_date_barometer_calibrated"), "Date barometer calibrated", value = "")
+        
+  })
+  
+  outputOptions(output, "do_date_barometer_calibrated_ui", suspendWhenHidden = FALSE)
+  
+  output$do_comment_ui <- renderUI({
+    
+    ns <- session$ns
+    check <- selected_check()
+    if(!is.null(check)) {
+      val <- check$COMMENT 
+    } else {
+      val <- ""
+    }
+    
+    textInput(ns("do_comment"), "Comment", width = "65%", value = val)
+    
+  })
+  
+  outputOptions(output, "do_comment_ui", suspendWhenHidden = FALSE)
+  
+  output$before_ui <- renderUI({
+    
+    ns <- session$ns
+    readings <- selected_readings()
+
+    if(!is.null(readings)) {
+      before <- readings %>%
+        filter(TYPE == "CALI")
+    } else {
+      before <- data.frame(TEMPERATURE = "", PRESSURE = "", SALINITY_CORRECTION = "1",
+                           DO_TABLE_VALUE = "", READING = "", 
+                           DATETIME = as.character(Sys.time(), format = "%Y-%m-%d %H:%M"),
+                           ZERO_READING = "", USED_FOR_RECAL = "")
+    }
+    
+    fluidRow(
+      column(1, textInput(ns("b_temperature"), "Temperature (C)",
+                          value = before$TEMPERATURE[1])),
+      column(1, textInput(ns("b_pressure"), "Pressure (mmHg)",
+                          value = before$PRESSURE[1])),
+      column(1, textInput(ns("b_salinity_correction"), "Salinity corection", 
+                          value = before$SALINITY_CORRECTION[1])),
+      column(1, textInput(ns("b_do_table_value"), "DO table value",
+                          value = before$DO_TABLE_VALUE[1])),
+      column(1, textInput(ns("b_reading"), "Reading",
+                          value = before$READING[1])),
+      column(1, textInput(ns("b_datetime"), "Datetime", placeholder = "yyyy-mm-dd hh:mm",
+                          value = before$DATETIME[1])),
+      column(1, textInput(ns("b_zero_reading"), "Reading in zero soln.",
+                          value = before$ZERO_READING[1]))
+    )
+    
+  })
+  outputOptions(output, "before_ui", suspendWhenHidden = FALSE)
+  
+  output$after_ui <- renderUI({
+    
+    ns <- session$ns
+    readings <- selected_readings()
+    
+    if(!is.null(readings)) {
+      after <- readings %>%
+        filter(TYPE == "RECL")
+    } else {
+      after <- data.frame(TEMPERATURE = "", PRESSURE = "", SALINITY_CORRECTION = "1",
+                           DO_TABLE_VALUE = "", READING = "", 
+                           DATETIME = as.character(Sys.time(), format = "%Y-%m-%d %H:%M"),
+                           ZERO_READING = "", USED_FOR_RECAL = "")
+    }
+    
+    fluidRow(
+      column(1, textInput(ns("a_temperature"), "Temperature (C)",
+                          value = after$TEMPERATURE[1])),
+      column(1, textInput(ns("a_pressure"), "Pressure (mmHg)",
+                          value = after$PRESSURE[1])),
+      column(1, textInput(ns("a_salinity_correction"), "Salinity corection", 
+                          value = after$SALINITY_CORRECTION[1])),
+      column(1, textInput(ns("a_do_table_value"), "DO table value",
+                          value = after$DO_TABLE_VALUE[1])),
+      column(1, textInput(ns("a_reading"), "Reading",
+                          value = after$READING[1])),
+      column(1, textInput(ns("a_datetime"), "Datetime",
+                          value = after$DATETIME[1])),
+      column(1, textInput(ns("a_zero_reading"), "Reading in zero soln.",
+                          value = after$ZERO_READING[1]))        
+    )
+    
+  })
+  outputOptions(output, "after_ui", suspendWhenHidden = FALSE)
   
   do_check_list <- reactive({
   
+    check <- selected_check()
+    readings <- selected_readings()
+    
     if(input$do_sensor_sn != "") {
       
       #Get data for do_CHECK table
@@ -781,10 +1017,20 @@ manualDo <- function(input, output, session) {
       ODO_GAIN_POST <- input$do_odo_gain_post
       COMMENT <- input$do_comment
       
-      do_check_df <- data.frame(SENSOR_ID, SC_AIR_SATURATED_WATER, TEMP_AIR_SATURATED_WATER, SALINITY,
-                                DATE_BAROMETER_CALIBRATED, ODO_GAIN_PRE, ODO_CAP_CHANGED, ODO_CAP_SN,
-                                ODO_GAIN_POST, COMMENT,
-                                stringsAsFactors = FALSE)
+      if(!is.null(check)) {
+        DO_ID <- check$DO_ID[1]
+        CAL_ID <- check$CAL_ID[1]
+        do_check_df <- data.frame(DO_ID, CAL_ID, SENSOR_ID, SC_AIR_SATURATED_WATER, TEMP_AIR_SATURATED_WATER, SALINITY,
+                                  DATE_BAROMETER_CALIBRATED, ODO_GAIN_PRE, ODO_CAP_CHANGED, ODO_CAP_SN,
+                                  ODO_GAIN_POST, COMMENT,
+                                  stringsAsFactors = FALSE)
+      } else {
+      
+        do_check_df <- data.frame(SENSOR_ID, SC_AIR_SATURATED_WATER, TEMP_AIR_SATURATED_WATER, SALINITY,
+                                  DATE_BAROMETER_CALIBRATED, ODO_GAIN_PRE, ODO_CAP_CHANGED, ODO_CAP_SN,
+                                  ODO_GAIN_POST, COMMENT,
+                                  stringsAsFactors = FALSE)
+      }
       
     } else {
       
@@ -806,6 +1052,7 @@ manualDo <- function(input, output, session) {
     DATETIME <- vector()
     ZERO_READING <- vector()
     TYPE <- vector()
+    USED_FOR_RECAL <- vector()
     
     # Get the before data
       
@@ -819,9 +1066,9 @@ manualDo <- function(input, output, session) {
         DATETIME[length(DATETIME) + 1] <- input$b_datetime
         ZERO_READING[length(ZERO_READING) + 1] <- input$b_zero_reading
         TYPE[length(TYPE) + 1] <- "CALI"
+        USED_FOR_RECAL[length(USED_FOR_RECAL) + 1] <- FALSE
       }
     }
-    
     
     #Get the after data
     
@@ -835,12 +1082,31 @@ manualDo <- function(input, output, session) {
         DATETIME[length(DATETIME) + 1] <- input$a_datetime
         ZERO_READING[length(ZERO_READING) + 1] <- input$a_zero_reading
         TYPE[length(TYPE) + 1] <- "RECL"
+        USED_FOR_RECAL[length(USED_FOR_RECAL) + 1] <- FALSE
       }
     }
     
-    
     do_reading_df <- data.frame(TEMPERATURE, PRESSURE, SALINITY_CORRECTION, DO_TABLE_VALUE, READING, DATETIME, 
-                                ZERO_READING, TYPE, stringsAsFactors = FALSE)
+                                ZERO_READING, TYPE, USED_FOR_RECAL, stringsAsFactors = FALSE)
+    
+    #If this is a previous entry that is being edited, add the ID columns 
+    if(!is.null(readings)) {
+      if(nrow(do_reading_df) >= nrow(readings)) {
+        do_reading_df <- do_reading_df %>%
+          mutate(DO_ID = check$DO_ID[1],
+                 DOR_ID = readings$DOR_ID[1:nrow(do_reading_df)])
+      } else {
+        do_reading_df <- do_reading_df %>%
+          mutate(DO_ID = check$DO_ID[1],
+                 DOR_ID = NA)
+        do_reading_df$DOR_ID[1:nrow(do_reading_df)] <- 
+          readings$DOR_ID[1:nrow(do_reading_df)]
+      }
+      do_reading_df <- select(do_reading_df,
+                              DOR_ID, DO_ID, TEMPERATURE, PRESSURE, SALINITY_CORRECTION,
+                              DO_TABLE_VALUE, READING, DATETIME, ZERO_READING, TYPE,
+                              USED_FOR_RECAL)
+    }
     
     list_out <- list(DO_CHECK = do_check_df, DO_READING = do_reading_df)
   

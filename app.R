@@ -107,6 +107,10 @@ ui <- dashboardPage(
               conditionalPanel("input.find_cal_parm == 'Turbidity, FNU'",
                 manualTbyInput("tby_edit")
               ),
+              conditionalPanel("input.find_cal_parm == 'Dissolved oxygen'",
+                manualDoInput("do_edit"),
+                verbatimTextOutput("do_edit_out")
+              ),
               actionButton("update", "Update")
             )
           ),
@@ -216,7 +220,10 @@ server <- function(input, output, session) {
                           sn = reactive(NULL),
                           selected_check = reactive(NULL),
                           selected_readings = reactive(NULL))
-  do_check <- callModule(manualDo, "do_check1")
+  do_check <- callModule(manualDo, "do_check1",
+                         sn = reactive(NULL),
+                         selected_check = reactive(NULL),
+                         selected_readings = reactive(NULL))
   ph_check <- callModule(manualPh, "ph_check1")
   wt_check <- callModule(manualWt, "wt_check1")
   
@@ -453,6 +460,14 @@ server <- function(input, output, session) {
                          sn = reactive(input$find_cal_sn),
                          selected_check = reactive(check()),
                          selected_readings = reactive(readings()))
+  do_edit <- callModule(manualDo, "do_edit",
+                        sn = reactive(input$find_cal_sn),
+                        selected_check = reactive(check()),
+                        selected_readings = reactive(readings()))
+  
+  output$do_edit_out <- renderPrint({
+    print(do_edit())
+  })
   
   observeEvent(input$update, {
 
