@@ -11,23 +11,29 @@ manualScInput <- function(id) {
   ns <- NS(id)
   
   tagList(
-    textInput(ns("sc_sensor_sn"), "Sensor serial number", placeholder = "12A34567"),
+    fluidRow(
+      column(2, uiOutput(ns("sensor_sn_ui")))
+    ),
     fluidRow(
       column(2,
-             textInput(ns("sc_cell_constant"), "Cell constant")
+        uiOutput(ns("cell_constant_ui"))
       ),
       column(2,
-             textInput(ns("sc_air_reading"), "Reading in air")
+        uiOutput(ns("air_reading_ui"))
       )
     ),
-    textInput(ns("sc_comment"), "Comment", width = "65%"),
+    uiOutput(ns("comment_ui")),
     tabsetPanel(
       tabPanel("Calibration",
-        sliderInput(ns("reading_count_before"), label = "Number of readings", min = 1, max = 5, value = 1, step = 1),
+        fluidRow(
+          column(2, uiOutput(ns("before_slider_ui")))
+        ),
         uiOutput(ns("sc_reading_before_ui"))
       ),
       tabPanel("Post-calibration",
-        sliderInput(ns("reading_count_after"), label = "Number of readings", min = 1, max = 5, value = 1, step = 1),
+        fluidRow(
+          column(2, uiOutput(ns("after_slider_ui")))
+        ),
         uiOutput(ns("sc_reading_after_ui"))
       )
     )
@@ -35,53 +41,220 @@ manualScInput <- function(id) {
   
 }
 
-manualSc <- function(input, output, session) {
+manualSc <- function(input, output, session, sn = NULL, selected_check = NULL, selected_readings = NULL) {
+  
+  output$sensor_sn_ui <- renderUI({
+    
+    ns <- session$ns
+    
+    readings <- selected_readings()
+    check <- selected_check()
+    
+    if(is.null(check)) {
+      val <- ""
+    } else {
+      val <- sn()
+    }
+    
+    textInput(ns("sc_sensor_sn"), "Sensor serial number", placeholder = "12A34567", value = val)
+    
+  })
+  
+  output$cell_constant_ui <- renderUI({
+    
+    ns <- session$ns
+    
+    readings <- selected_readings()
+    check <- selected_check()
+    
+    if(is.null(check)) {
+      val <- ""
+    } else {
+      val <- check$CELL_CONSTANT
+    }
+    
+    textInput(ns("sc_air_reading"), label = "Reading in air", value = val)
+    
+  })
+  
+  output$air_reading_ui <- renderUI({
+    
+    ns <- session$ns
+    
+    readings <- selected_readings()
+    check <- selected_check()
+
+    if(is.null(check)) {
+      val <- ""
+    } else {
+      val <- check$AIR_READING
+    }
+    
+    textInput(ns("sc_cell_constant"), label = "Cell constant", value = val)
+    
+  })
+  
+  output$comment_ui <- renderUI({
+    
+    ns <- session$ns
+    
+    readings <- selected_readings()
+    check <- selected_check()
+    
+    if(is.null(check)) {
+      val <- ""
+    } else {
+      val <- check$COMMENT
+    }
+    
+    textInput(ns("sc_comment"), "Comment", width = "65%", val = val)
+    
+  })
+  
+  output$before_slider_ui <- renderUI({
+    
+    ns <- session$ns
+    
+    readings <- selected_readings()
+    check <- selected_check()
+    
+    print(readings)
+    
+    if(is.null(readings)) {
+      val <- 1
+    } else {
+      val <- nrow(readings[readings$TYPE == "CALI",])
+      if(val == 0)
+        val <- 1
+    }
+    
+    sliderInput(ns("reading_count_before"), label = "Number of readings", min = 1, max = 5, value = val, step = 1)
+    
+  })
+  
+  outputOptions(output, "before_slider_ui", suspendWhenHidden = FALSE)
+  
+  output$after_slider_ui <- renderUI({
+    
+    ns <- session$ns
+    
+    readings <- selected_readings()
+    check <- selected_check()
+    
+    if(is.null(readings)) {
+      val <- 1
+    } else {
+      val <- nrow(readings[readings$TYPE == "RECL",])
+      if(val == 0)
+        val <- 1
+    }
+    
+    sliderInput(ns("reading_count_after"), label = "Number of readings", min = 1, max = 5, value = val, step = 1)
+    
+  })
+  
+  outputOptions(output, "after_slider_ui", suspendWhenHidden = FALSE)
+  
+  
   
   output$sc_reading_before_ui <- renderUI({
     
     ns <- session$ns
     
+    readings <- selected_readings()
+    check <- selected_check()
+  
+    if(is.null(readings)) {
+      before <- data.frame(
+        STD_VALUE = rep("", input$reading_count_before),
+        STD_EXPIRATION = rep("", input$reading_count_before),
+        STD_TYPE = rep("KCl", input$reading_count_before),
+        STD_LOT = rep("", input$reading_count_before),
+        READING = rep("", input$reading_count_before),
+        TEMPERATURE = rep("", input$reading_count_before),
+        DATETIME = rep(as.character(Sys.time(), format = "%Y-%m-%d %H:%M"), input$reading_count_before)
+      )
+    } else {
+      before <- readings %>%
+        filter(TYPE == "CALI")
+    }
+
     lapply(1:input$reading_count_before, function(i) {
       fluidRow(
-        column(1, textInput(ns(paste0("b_std_value", i)), label = "Std. value")),
+        column(1, textInput(ns(paste0("b_std_value", i)), label = "Std. value",
+                            value = before$STD_VALUE[i])),
         column(1, textInput(ns(paste0("b_std_expiration", i)), label = "Std. expiration",
-                            placeholder = "yyyy-mm-dd")),
+                            placeholder = "yyyy-mm-dd",
+                            value = before$STD_EXPIRATION[i])),
         column(1, selectInput(ns(paste0("b_std_type", i)), label = "Std. type",
-                              choices = c("KCl", "DI", "Other"))),
-        column(1, textInput(ns(paste0("b_std_lot", i)), label = "Std. lot")),
-        column(1, textInput(ns(paste0("b_reading", i)), label = "Reading")),
-        column(1, textInput(ns(paste0("b_temperature", i)), label = "Temperature")),
+                              choices = c("KCl", "DI", "Other"),
+                              selected = before$STD_TYPE[i])),
+        column(1, textInput(ns(paste0("b_std_lot", i)), label = "Std. lot",
+                            value = before$STD_LOT[i])),
+        column(1, textInput(ns(paste0("b_reading", i)), label = "Reading",
+                            value = before$READING[i])),
+        column(1, textInput(ns(paste0("b_temperature", i)), label = "Temperature",
+                            value = before$TEMPERATURE[i])),
         column(1, textInput(ns(paste0("b_datetime", i)), label = "Date/Time",
-                            value = as.character(Sys.time(), format="%Y-%m-%d %H:%M")))
+                            value = before$DATETIME[i]))
       )
     })
   })
+  outputOptions(output, "sc_reading_before_ui", suspendWhenHidden = FALSE)
   
   output$sc_reading_after_ui <- renderUI({
     
     ns <- session$ns
     
+    readings <- selected_readings()
+    check <- selected_check()
+    
+    if(is.null(readings)) {
+      after <- data.frame(
+        STD_VALUE = rep("", input$reading_count_after),
+        STD_EXPIRATION = rep("", input$reading_count_after),
+        STD_TYPE = rep("KCl", input$reading_count_after),
+        STD_LOT = rep("", input$reading_count_after),
+        READING = rep("", input$reading_count_after),
+        TEMPERATURE = rep("", input$reading_count_after),
+        DATETIME = rep(as.character(Sys.time(), format = "%Y-%m-%d %H:%M"), input$reading_count_after),
+        USED_FOR_RECAL = rep(FALSE, input$reading_count_after)
+      )
+    } else {
+      after <- readings %>%
+        filter(TYPE == "RECL")
+      after$USED_FOR_RECAL[is.na(after$USED_FOR_RECAL)] <- FALSE
+    }
+    
     lapply(1:input$reading_count_after, function(i) {
       fluidRow(
-        column(1, textInput(ns(paste0("a_std_value", i)), label = "Std. value")),
+        column(1, textInput(ns(paste0("a_std_value", i)), label = "Std. value",
+                            value = after$STD_VALUE[i])),
         column(1, textInput(ns(paste0("a_std_expiration", i)), label = "Std. expiration",
-                            placeholder = "yyyy-mm-dd")),
+                            placeholder = "yyyy-mm-dd",
+                            value = after$STD_EXPIRATION[i])),
         column(1, selectInput(ns(paste0("a_std_type", i)), label = "Std. type",
-                              choices = c("KCl", "DI water", "Other"))),
-        column(1, textInput(ns(paste0("a_std_lot", i)), label = "Std. lot")),
-        column(1, textInput(ns(paste0("a_reading", i)), label = "Reading")),
-        column(1, textInput(ns(paste0("a_temperature", i)), label = "Temperature")),
+                              choices = c("KCl", "DI water", "Other"),
+                              selected = after$STD_TYPE[i])),
+        column(1, textInput(ns(paste0("a_std_lot", i)), label = "Std. lot",
+                            value = after$STD_LOT[i])),
+        column(1, textInput(ns(paste0("a_reading", i)), label = "Reading",
+                            value = after$READING[i])),
+        column(1, textInput(ns(paste0("a_temperature", i)), label = "Temperature",
+                            value = after$TEMPERATURE[i])),
         column(1, textInput(ns(paste0("a_datetime", i)), label = "Date/Time",
-                            value = as.character(Sys.time(), format="%Y-%m-%d %H:%M"))),
-        column(1, checkboxInput(ns(paste0("a_used", i)), label = "Used for recal"))
+                            value = after$DATETIME[i])),
+        column(1, checkboxInput(ns(paste0("a_used", i)), label = "Used for recal",
+                                value = false_if_null(after$USED_FOR_RECAL[i])))
       )
     })
   })
-  
-  
+  outputOptions(output, "sc_reading_after_ui", suspendWhenHidden = FALSE)
   
   sc_check_list <- reactive({
     
+    readings <- selected_readings()
+    check <- selected_check()
     
     if(input$sc_sensor_sn != "") {
       
@@ -92,8 +265,16 @@ manualSc <- function(input, output, session) {
       AIR_READING <- empty_if_null(input$sc_air_reading)
       COMMENT <- empty_if_null(input$sc_comment)
       
-      sc_check_df <- data.frame(SENSOR_ID, CELL_CONSTANT, AIR_READING, COMMENT,
-                                stringsAsFactors = FALSE)
+      if(!is.null(check)) {
+        SC_ID = check$SC_ID[1]
+        CAL_ID = check$CAL_ID[1]
+        sc_check_df <- data.frame(SC_ID, CAL_ID, SENSOR_ID, CELL_CONSTANT, AIR_READING, COMMENT,
+                                  stringsAsFactors = FALSE)
+      } else {
+        
+        sc_check_df <- data.frame(SENSOR_ID, CELL_CONSTANT, AIR_READING, COMMENT,
+                                  stringsAsFactors = FALSE)
+      }
       
     } else {
       
@@ -115,45 +296,65 @@ manualSc <- function(input, output, session) {
     USED_FOR_RECAL <- vector()
     
     # Get the before data
-    for(i in 1:input$reading_count_before) {
-      
-      if(!is.null(input[[paste0("b_std_value", i)]])) {
-        if(input[[paste0("b_std_value", i)]] != "") {
-          STD_VALUE[length(STD_VALUE) + 1] <- input[[paste0("b_std_value", i)]]
-          STD_EXPIRATION[length(STD_EXPIRATION) + 1] <- empty_if_null(input[[paste0("b_std_expiration", i)]])
-          STD_TYPE[length(STD_TYPE) + 1] <- empty_if_null(input[[paste0("b_std_type", i)]])
-          STD_LOT[length(STD_LOT) + 1] <- empty_if_null(input[[paste0("b_std_lot", i)]])
-          READING[length(READING) + 1] <- empty_if_null(input[[paste0("b_reading", i)]])
-          TEMPERATURE[length(TEMPERATURE) + 1] <- empty_if_null(input[[paste0("b_temperature", i)]])
-          DATETIME[length(DATETIME) + 1] <- empty_if_null(input[[paste0("b_datetime", i)]])
-          TYPE[length(TYPE) + 1] <- "CALI"
-          USED_FOR_RECAL[length(USED_FOR_RECAL) + 1] <- FALSE
+    if(!is.null(input$reading_count_before)) {
+      for(i in 1:input$reading_count_before) {
+        
+        if(!is.null(input[[paste0("b_std_value", i)]])) {
+          if(input[[paste0("b_std_value", i)]] != "") {
+            STD_VALUE[length(STD_VALUE) + 1] <- input[[paste0("b_std_value", i)]]
+            STD_EXPIRATION[length(STD_EXPIRATION) + 1] <- empty_if_null(input[[paste0("b_std_expiration", i)]])
+            STD_TYPE[length(STD_TYPE) + 1] <- empty_if_null(input[[paste0("b_std_type", i)]])
+            STD_LOT[length(STD_LOT) + 1] <- empty_if_null(input[[paste0("b_std_lot", i)]])
+            READING[length(READING) + 1] <- empty_if_null(input[[paste0("b_reading", i)]])
+            TEMPERATURE[length(TEMPERATURE) + 1] <- empty_if_null(input[[paste0("b_temperature", i)]])
+            DATETIME[length(DATETIME) + 1] <- empty_if_null(input[[paste0("b_datetime", i)]])
+            TYPE[length(TYPE) + 1] <- "CALI"
+            USED_FOR_RECAL[length(USED_FOR_RECAL) + 1] <- FALSE
+          }
         }
       }
-      
     }
     
     #Get the after data
-    for(i in 1:input$reading_count_after) {
-      
-      if(!is.null(input[[paste0("a_std_value", i)]])) {
-        if(input[[paste0("a_std_value", i)]] != "") {
-          STD_VALUE[length(STD_VALUE) + 1] <- input[[paste0("a_std_value", i)]]
-          STD_EXPIRATION[length(STD_EXPIRATION) + 1] <- empty_if_null(input[[paste0("a_std_expiration", i)]])
-          STD_TYPE[length(STD_TYPE) + 1] <- empty_if_null(input[[paste0("a_std_type", i)]])
-          STD_LOT[length(STD_LOT) + 1] <- empty_if_null(input[[paste0("a_std_lot", i)]])
-          READING[length(READING) + 1] <- empty_if_null(input[[paste0("a_reading", i)]])
-          TEMPERATURE[length(TEMPERATURE) + 1] <- empty_if_null(input[[paste0("a_temperature", i)]])
-          DATETIME[length(DATETIME) + 1] <- empty_if_null(input[[paste0("a_datetime", i)]])
-          TYPE[length(TYPE) + 1] <- "RECL"
-          USED_FOR_RECAL[length(USED_FOR_RECAL) + 1] <- input[[paste0("a_used", i)]]
+    if(!is.null(input$reading_count_after)) {
+      for(i in 1:input$reading_count_after) {
+        
+        if(!is.null(input[[paste0("a_std_value", i)]])) {
+          if(input[[paste0("a_std_value", i)]] != "") {
+            STD_VALUE[length(STD_VALUE) + 1] <- input[[paste0("a_std_value", i)]]
+            STD_EXPIRATION[length(STD_EXPIRATION) + 1] <- empty_if_null(input[[paste0("a_std_expiration", i)]])
+            STD_TYPE[length(STD_TYPE) + 1] <- empty_if_null(input[[paste0("a_std_type", i)]])
+            STD_LOT[length(STD_LOT) + 1] <- empty_if_null(input[[paste0("a_std_lot", i)]])
+            READING[length(READING) + 1] <- empty_if_null(input[[paste0("a_reading", i)]])
+            TEMPERATURE[length(TEMPERATURE) + 1] <- empty_if_null(input[[paste0("a_temperature", i)]])
+            DATETIME[length(DATETIME) + 1] <- empty_if_null(input[[paste0("a_datetime", i)]])
+            TYPE[length(TYPE) + 1] <- "RECL"
+            USED_FOR_RECAL[length(USED_FOR_RECAL) + 1] <- input[[paste0("a_used", i)]]
+          }
         }
       }
-      
     }
     
     sc_reading_df <- data.frame(STD_VALUE, STD_EXPIRATION, STD_TYPE, STD_LOT, READING, TEMPERATURE, 
                                 DATETIME, TYPE, USED_FOR_RECAL, stringsAsFactors = FALSE)
+    
+    #If this is a previous entry that is being edited, add the ID columns 
+    if(!is.null(readings)) {
+      if(nrow(sc_reading_df) >= nrow(readings)) {
+        sc_reading_df <- sc_reading_df %>%
+          mutate(SC_ID = check$SC_ID[1],
+                 SCR_ID = readings$SCR_ID[1:nrow(sc_reading_df)])
+      } else {
+        sc_reading_df <- sc_reading_df %>%
+          mutate(SC_ID = check$SC_ID[1],
+                 SCR_ID = NA)
+        sc_reading_df$SCR_ID[1:nrow(sc_reading_df)] <- 
+          readings$SCR_ID[1:nrow(sc_reading_df)]
+      }
+      sc_reading_df <- select(sc_reading_df,
+                              SCR_ID, SC_ID, STD_VALUE, STD_EXPIRATION, STD_TYPE, STD_LOT,
+                              READING, TEMPERATURE, DATETIME, TYPE, USED_FOR_RECAL)
+    }
     
     list_out <- list(SC_CHECK = sc_check_df, SC_READING = sc_reading_df)
     

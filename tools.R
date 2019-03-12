@@ -655,6 +655,14 @@ get_max_keys <- function(dbcon) {
     max_source_id <- 0
   }
   
+  sensor_id <- tbl(dbcon, "SENSOR") %>%
+    pull(SENSOR_ID)
+  if(length(sensor_id) > 0) {
+    max_sensor_id <- max(sensor_id)
+  } else {
+    max_sensor_id <- 0
+  }
+  
   cal_id <- tbl(dbcon, "CALIBRATION") %>%
     pull(CAL_ID) 
   if(length(cal_id) > 0) {
@@ -758,7 +766,8 @@ get_max_keys <- function(dbcon) {
                 "PH_ID" = max_ph_id, "PHR_ID" = max_phr_id,
                 "WT_COMP_ID" = max_wt_comp_id, 
                 "WT_MULTIPOINT_ID" = max_wt_multipoint_id,
-                "WTR_MULTIPOINT_ID" = max_wtr_multipoint_id)
+                "WTR_MULTIPOINT_ID" = max_wtr_multipoint_id,
+                "SENSOR_ID" = max_sensor_id)
   
   return(max_keys)
   
@@ -1022,6 +1031,16 @@ empty_if_null <- function(x) {
   
 }
 
+false_if_null <- function(x) {
+  if(is.null(x)) {
+    x <- FALSE
+  }
+  if(is.na(x)) {
+    x <- FALSE
+  }
+  return(x)
+}
+
 get_cal_list <- function(parameter, serial_number, dbcon) {
   #Find the basetable
   if(parameter == "Specific cond at 25C") {
@@ -1074,4 +1093,55 @@ get_cal_list <- function(parameter, serial_number, dbcon) {
   
   return(cal_list)
 }
+
+update <- function(parameter, check, readings, dbcon) {
+  
+  pt_check <- path("check.csv")
+  pt_readings <- path("reading.csv")
+  write.csv(check, pt_check, row.names = FALSE)
+  write.csv(readings, pt_readings, row.names = FALSE)
+  message(paste("Files written to", path_wd(pt_check), path_wd(pt_readings)))
+  
+  if(parameter == "Specific cond at 25C") {
+    check_table <- "SC_CHECK"
+    reading_table <- "SC_READING"
+    check_id <- "SC_ID"
+    reading_id <- "SCR_ID"
+  } else if(parameter == "Turbidity, FNU") {
+    check_id <- "TBY_ID"
+    reading_id <- "TBYR_ID"
+  } else if(parameter == "Dissolved oxygen") {
+    check_id <- "DO_ID"
+    reading_id <- "DOR_ID"
+  } else if(parameter == "pH") {
+    check_id <- "PH_ID"
+    reading_id <- "PHR_ID"
+  } else if(parameter == "Temperature, water (comparison)") {
+    check_id <- "WT_COMP_ID"
+    reading_id <- ""
+  } else if(parameter == "Temperature, water (multi-point)") {
+    check_id <- "WT_MULTIPOINT_ID"
+    reading_id <- "WTR_MULTIPOINT_ID"
+  }
+  
+  this_check <- check[1,] %>% pull(check_id)
+  
+  if(reading_id != "") {
+    delete_reading <- paste("DELETE FROM", reading_table, "WHERE", check_id, "=", this_check)
+    rs <- dbSendStatement(dbcon, delete_reading)
+    dbClearResult(rs)
+  }
+  
+  delete_check <- paste("DELETE FROM", check_table, "WHERE", check_id, "=", this_check)
+  rs <- dbSendStatement(dbcon, delete_check)
+  dbClearResult(rs)
+  
+  if(reading_id != "") {
+    dbWriteTable(dbcon, check_table, check, append = TRUE)
+  }
+  
+  dbWriteTable(dbcon, reading_table, readings, append = TRUE)
+}
+
+
 

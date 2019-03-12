@@ -3,6 +3,7 @@ library(shinydashboard)
 library(dplyr)
 library(ggplot2)
 library(knitr)
+library(fs)
 source("tools.R")
 source("plotting.R")
 source("modules.R")
@@ -12,12 +13,12 @@ ui <- dashboardPage(
   
   dashboardSidebar(
     sidebarMenu(
-      menuItem("New calibration", startExpanded = TRUE,
+      menuItem("View calibrations", tabName = "view_cal"),
+      menuItem("New calibration", startExpanded = FALSE,
         menuSubItem("From XML", tabName = "new_cal_xml"),
         menuSubItem("Manual", tabName = "new_cal_manual")
       ),
-      menuItem("View calibrations", tabName = "view_cal"),
-      menuItem("Reports", startExpanded = TRUE,
+      menuItem("Reports", startExpanded = FALSE,
         menuSubItem("Probe history", tabName = "probe_history")
       )
     )
@@ -93,8 +94,19 @@ ui <- dashboardPage(
           fluidRow(
             column(3, uiOutput("select_calibration_ui"))
           ),
-          tableOutput("view_check_out"),
-          tableOutput("view_reading_out"),
+          tabsetPanel(
+            tabPanel("View",
+              tableOutput("view_check_out"),
+              tableOutput("view_reading_out"),
+              actionButton("refresh", "Refresh")
+            ),
+            tabPanel("Edit",
+              conditionalPanel("input.find_cal_parm == 'Specific cond at 25C'",
+                manualScInput("sc_edit")
+              ),
+              actionButton("update", "Update")
+            )
+          ),
         width = 11)
       ),
       tabItem("probe_history",
@@ -193,7 +205,10 @@ server <- function(input, output, session) {
     
   })
   
-  sc_check <- callModule(manualSc, "sc_check1")
+  sc_check <- callModule(manualSc, "sc_check1", 
+                         sn = reactive(NULL), 
+                         selected_check = reactive(NULL), 
+                         selected_readings = reactive(NULL))
   tby_check <- callModule(manualTby, "tby_check1")
   do_check <- callModule(manualDo, "do_check1")
   ph_check <- callModule(manualPh, "ph_check1")
@@ -339,6 +354,8 @@ server <- function(input, output, session) {
   
   selected_calibration_out <- reactive({
     
+    input$refresh
+    
     if(input$which_cal == "")
       return(NULL)
     
@@ -357,7 +374,7 @@ server <- function(input, output, session) {
     
     check <- check_table %>%
       inner_join(sensor_table) %>%
-      select(-ends_with("_ID"))
+      collect()
     
     check_table <- check_table %>%
       select(ends_with("_ID"))
@@ -366,7 +383,8 @@ server <- function(input, output, session) {
       
       reading <- check_table %>%
         inner_join(reading_table) %>%
-        select(-ends_with("_ID"))
+        collect()
+      
       out <- list(check, reading)
       names(out) <- c("check","reading")
       
@@ -381,18 +399,112 @@ server <- function(input, output, session) {
     
   })
   
+  check <- reactive({
+    
+    check <- selected_calibration_out()
+    check <- check[["check"]]
+    return(check)
+  })
+  
+  readings <- reactive({
+    
+    readings <- selected_calibration_out()
+    readings <- readings[["reading"]]
+    return(readings)
+  })
+  
   output$view_check_out <- renderTable({
     
-    selected_calibration_out()$check
+    if(!is.null(check())) {
+      out <- check() %>%
+        select(-ends_with("_ID"))
+    } else {
+      out <- NULL
+    }
+    
+    out
     
   })
   
   output$view_reading_out <- renderTable({
     
-    selected_calibration_out()$reading
+    if(!is.null(readings())) {
+      out <- readings() %>%
+        select(-ends_with("_ID"))
+    } else {
+      out <- NULL
+    }
+    
+    out
     
   })
+
+  sc_edit <- callModule(manualSc, "sc_edit", 
+                        sn = reactive(input$find_cal_sn),
+                        selected_check = reactive(check()),
+                        selected_readings = reactive(readings()))
   
+  observeEvent(input$update, {
+
+    max_keys <- get_max_keys(dbcon)
+    
+    if(input$find_cal_parm == "Specific cond at 25C") {
+      edit <- sc_edit()
+      reading_id <- "SCR_ID"
+    } else if(input$find_cal_parm == "Turbidity, FNU") {
+      edit <- tby_edit()
+      reading_id <- "TBYR_ID"
+    } else if(input$find_cal_parm == "Dissolved oxygen") {
+      edit <- do_edit()
+      reading_id <- "DOR_ID"
+    } else if(input$find_cal_parm == "pH") {
+      edit <- ph_edit()
+      reading_id <- "PHR_ID"
+    } else if(input$find_cal_parm == "Temperature, water (comparison)") {
+      edit <- wt_edit()
+      reading_id <- ""
+    } else if(input$find_cal_parm == "Temperature, water (multi-point)") {
+      edit <- wt_edit()
+      reading_id <- "WTR_MULTIPOINT_ID"
+    }
+    
+    #Look up the sensor
+    sensors <- tbl(dbcon, "SENSOR")
+    sensor_sn <- edit[[view_base_table()[1]]]$SENSOR_ID
+    sensor_id <- sensors %>%
+      filter(SENSOR_SN == sensor_sn, PARAMETER == input$find_cal_parm) %>%
+      pull(SENSOR_ID)
+    
+    #If it's a new sensor, write it to the database
+    if(length(sensor_id) == 0) {
+      SENSOR_ID <- max_keys["SENSOR_ID"] + 1
+      new_sensor <- data.frame(
+        SENSOR_ID = SENSOR_ID,
+        SENSOR_SN = sensor_sn,
+        PARAMETER = input$find_cal_parm,
+        MANUFACTURER = "",
+        MODEL = ""
+      )
+      dbWriteTable(dbcon, "SENSOR", new_sensor, append = TRUE)
+      sensor_id <- new_sensor$SENSOR_ID
+    }
+    
+    edit[[view_base_table()[1]]]$SENSOR_ID <- sensor_id
+    
+    if(reading_id != "") {
+      if(nrow(edit[[view_base_table()[2]]]) > 0) {
+        edit[[view_base_table()[2]]][,reading_id] <- 
+          1:nrow(edit[[view_base_table()[2]]]) + max_keys[reading_id]
+      }
+    }
+    
+    update(input$find_cal_parm, 
+           edit[[view_base_table()[1]]], 
+           edit[[view_base_table()[2]]], 
+           dbcon)
+    
+  })
+
   output$probe_history_sn_choices <- renderUI({
     
     serial_number_choices <- tbl(dbcon, "SENSOR") %>%
