@@ -4,6 +4,7 @@ library(lubridate)
 library(DBI)
 library(RSQLite)
 library(dplyr)
+library(stringr)
 
 read_sv_xml <- function(xml_path) {
   
@@ -1123,9 +1124,13 @@ update <- function(parameter, check, readings, dbcon) {
     check_id <- "PH_ID"
     reading_id <- "PHR_ID"
   } else if(parameter == "Temperature, water (comparison)") {
+    check_table <- "WT_COMPARISON_CHECK"
+    reading_table <- ""
     check_id <- "WT_COMP_ID"
     reading_id <- ""
   } else if(parameter == "Temperature, water (multi-point)") {
+    check_table <- "WT_MULTIPOINT_CHECK"
+    reading_table <- "WT_MULTIPOINT_READING"
     check_id <- "WT_MULTIPOINT_ID"
     reading_id <- "WTR_MULTIPOINT_ID"
   }
@@ -1143,10 +1148,63 @@ update <- function(parameter, check, readings, dbcon) {
   dbClearResult(rs)
   
   if(reading_id != "") {
-    dbWriteTable(dbcon, check_table, check, append = TRUE)
+    dbWriteTable(dbcon, reading_table, readings, append = TRUE)
+  }
+  dbWriteTable(dbcon, check_table, check, append = TRUE)
+  
+}
+
+delete <- function(parameter, check, readings, dbcon, keyword) {
+  
+  print(str_to_upper(keyword))
+  
+  if(str_to_upper(keyword) != "DELETE")
+    return(NULL)
+  
+  if(parameter == "Specific cond at 25C") {
+    check_table <- "SC_CHECK"
+    reading_table <- "SC_READING"
+    check_id <- "SC_ID"
+    reading_id <- "SCR_ID"
+  } else if(parameter == "Turbidity, FNU") {
+    check_table <- "TBY_CHECK"
+    reading_table <- "TBY_READING"
+    check_id <- "TBY_ID"
+    reading_id <- "TBYR_ID"
+  } else if(parameter == "Dissolved oxygen") {
+    check_table <- "DO_CHECK"
+    reading_table <- "DO_READING"
+    check_id <- "DO_ID"
+    reading_id <- "DOR_ID"
+  } else if(parameter == "pH") {
+    check_table <- "PH_CHECK"
+    reading_table <- "PH_READING"
+    check_id <- "PH_ID"
+    reading_id <- "PHR_ID"
+  } else if(parameter == "Temperature, water (comparison)") {
+    check_table <- "WT_COMPARISON_CHECK"
+    reading_table <- ""
+    check_id <- "WT_COMP_ID"
+    reading_id <- ""
+  } else if(parameter == "Temperature, water (multi-point)") {
+    check_table <- "WT_MULTIPOINT_CHECK"
+    reading_table <- "WT_MULTIPOINT_READING"
+    check_id <- "WT_MULTIPOINT_ID"
+    reading_id <- "WTR_MULTIPOINT_ID"
   }
   
-  dbWriteTable(dbcon, reading_table, readings, append = TRUE)
+  this_check <- check[1,] %>% pull(check_id)
+  
+  if(reading_id != "") {
+    delete_reading <- paste("DELETE FROM", reading_table, "WHERE", check_id, "=", this_check)
+    rs <- dbSendStatement(dbcon, delete_reading)
+    dbClearResult(rs)
+  }
+  
+  delete_check <- paste("DELETE FROM", check_table, "WHERE", check_id, "=", this_check)
+  rs <- dbSendStatement(dbcon, delete_check)
+  dbClearResult(rs)
+  
 }
 
 

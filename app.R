@@ -108,10 +108,22 @@ ui <- dashboardPage(
                 manualTbyInput("tby_edit")
               ),
               conditionalPanel("input.find_cal_parm == 'Dissolved oxygen'",
-                manualDoInput("do_edit"),
-                verbatimTextOutput("do_edit_out")
+                manualDoInput("do_edit")
               ),
-              actionButton("update", "Update")
+              conditionalPanel("input.find_cal_parm == 'pH'",
+                manualPhInput("ph_edit")                 
+              ),
+              conditionalPanel("input.find_cal_parm == 'Temperature, water (comparison)'",
+                manualWtInput("wt_edit_comp")                 
+              ),
+              conditionalPanel("input.find_cal_parm == 'Temperature, water (multi-point)'",
+                manualWtInput("wt_edit_multi")               
+              ),
+              fluidRow(
+                column(1, actionButton("update", "Update")),
+                column(1, actionButton("delete_check", "Delete")),
+                column(1, textInput("delete_keyword", label = NULL, placeholder = "delete"))
+              )
             )
           ),
         width = 11)
@@ -224,8 +236,14 @@ server <- function(input, output, session) {
                          sn = reactive(NULL),
                          selected_check = reactive(NULL),
                          selected_readings = reactive(NULL))
-  ph_check <- callModule(manualPh, "ph_check1")
-  wt_check <- callModule(manualWt, "wt_check1")
+  ph_check <- callModule(manualPh, "ph_check1",
+                         sn = reactive(NULL),
+                         selected_check = reactive(NULL),
+                         selected_readings = reactive(NULL))
+  wt_check <- callModule(manualWt, "wt_check1",
+                         sn = reactive(NULL),
+                         selected_check = reactive(NULL),
+                         selected_readings = reactive(NULL))
   
   output$sc_out <- renderPrint({
     
@@ -403,8 +421,8 @@ server <- function(input, output, session) {
       
     } else {
       
-      out <- list(check)
-      names(out) <- "check"
+      out <- list(check, reading = NULL)
+      names(out) <- c("check", "reading")
       
     }
 
@@ -464,6 +482,18 @@ server <- function(input, output, session) {
                         sn = reactive(input$find_cal_sn),
                         selected_check = reactive(check()),
                         selected_readings = reactive(readings()))
+  ph_edit <- callModule(manualPh, "ph_edit",
+                        sn = reactive(input$find_cal_sn),
+                        selected_check = reactive(check()),
+                        selected_readings = reactive(readings()))
+  wt_edit_comp <- callModule(manualWt, "wt_edit_comp",
+                             sn = reactive(input$find_cal_sn),
+                             selected_check = reactive(check()),
+                             selected_readings = reactive(readings()))
+  wt_edit_multi <- callModule(manualWt, "wt_edit_multi",
+                              sn = reactive(input$find_cal_sn),
+                              selected_check = reactive(check()),
+                              selected_readings = reactive(readings()))
   
   output$do_edit_out <- renderPrint({
     print(do_edit())
@@ -486,10 +516,10 @@ server <- function(input, output, session) {
       edit <- ph_edit()
       reading_id <- "PHR_ID"
     } else if(input$find_cal_parm == "Temperature, water (comparison)") {
-      edit <- wt_edit()
+      edit <- wt_edit_comp()
       reading_id <- ""
     } else if(input$find_cal_parm == "Temperature, water (multi-point)") {
-      edit <- wt_edit()
+      edit <- wt_edit_multi()
       reading_id <- "WTR_MULTIPOINT_ID"
     }
     
@@ -527,6 +557,38 @@ server <- function(input, output, session) {
            edit[[view_base_table()[1]]], 
            edit[[view_base_table()[2]]], 
            dbcon)
+    
+  })
+  
+  observeEvent(input$delete_check, {
+    
+    max_keys <- get_max_keys(dbcon)
+    
+    if(input$find_cal_parm == "Specific cond at 25C") {
+      edit <- sc_edit()
+      reading_id <- "SCR_ID"
+    } else if(input$find_cal_parm == "Turbidity, FNU") {
+      edit <- tby_edit()
+      reading_id <- "TBYR_ID"
+    } else if(input$find_cal_parm == "Dissolved oxygen") {
+      edit <- do_edit()
+      reading_id <- "DOR_ID"
+    } else if(input$find_cal_parm == "pH") {
+      edit <- ph_edit()
+      reading_id <- "PHR_ID"
+    } else if(input$find_cal_parm == "Temperature, water (comparison)") {
+      edit <- wt_edit_comp()
+      reading_id <- ""
+    } else if(input$find_cal_parm == "Temperature, water (multi-point)") {
+      edit <- wt_edit_multi()
+      reading_id <- "WTR_MULTIPOINT_ID"
+    }
+    
+    delete(input$find_cal_parm, 
+           edit[[view_base_table()[1]]], 
+           edit[[view_base_table()[2]]], 
+           dbcon,
+           input$delete_keyword)
     
   })
 
