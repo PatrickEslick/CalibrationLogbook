@@ -43,11 +43,31 @@ manualScInput <- function(id) {
 
 manualSc <- function(input, output, session, sn = NULL, selected_check = NULL, selected_readings = NULL) {
   
-  message("SC CALLED")
+  check_parameter <- reactive({
+    
+    check <- selected_check()
+    readings <- selected_readings()
+    
+    if(!is.null(check)) {
+      if("SC_ID" %in% names(check) & "SCR_ID" %in% names(readings)) {
+        match <- TRUE
+      } else {
+        match <- FALSE
+      }
+    } else {
+      match <- TRUE
+    }
+    
+    return(match)
+    
+  })
   
   output$sensor_sn_ui <- renderUI({
     
     ns <- session$ns
+    
+    if(!check_parameter())
+      return(NULL)
     
     readings <- selected_readings()
     check <- selected_check()
@@ -68,6 +88,9 @@ manualSc <- function(input, output, session, sn = NULL, selected_check = NULL, s
     
     ns <- session$ns
     
+    if(!check_parameter())
+      return(NULL)
+    
     readings <- selected_readings()
     check <- selected_check()
     
@@ -86,6 +109,9 @@ manualSc <- function(input, output, session, sn = NULL, selected_check = NULL, s
   output$air_reading_ui <- renderUI({
     
     ns <- session$ns
+    
+    if(!check_parameter())
+      return(NULL)
     
     readings <- selected_readings()
     check <- selected_check()
@@ -106,6 +132,9 @@ manualSc <- function(input, output, session, sn = NULL, selected_check = NULL, s
     
     ns <- session$ns
     
+    if(!check_parameter())
+      return(NULL)
+    
     readings <- selected_readings()
     check <- selected_check()
     
@@ -124,6 +153,9 @@ manualSc <- function(input, output, session, sn = NULL, selected_check = NULL, s
   output$before_slider_ui <- renderUI({
     
     ns <- session$ns
+    
+    if(!check_parameter())
+      return(NULL)
     
     readings <- selected_readings()
     check <- selected_check()
@@ -146,6 +178,9 @@ manualSc <- function(input, output, session, sn = NULL, selected_check = NULL, s
     
     ns <- session$ns
     
+    if(!check_parameter())
+      return(NULL)
+    
     readings <- selected_readings()
     check <- selected_check()
     
@@ -166,6 +201,12 @@ manualSc <- function(input, output, session, sn = NULL, selected_check = NULL, s
   output$sc_reading_before_ui <- renderUI({
     
     ns <- session$ns
+    
+    if(!check_parameter())
+      return(NULL)
+    
+    if(is.null(input$reading_count_before))
+      return(NULL)
     
     readings <- selected_readings()
     check <- selected_check()
@@ -211,6 +252,12 @@ manualSc <- function(input, output, session, sn = NULL, selected_check = NULL, s
   output$sc_reading_after_ui <- renderUI({
     
     ns <- session$ns
+    
+    if(!check_parameter())
+      return(NULL)
+    
+    if(is.null(input$reading_count_before))
+      return(NULL)
     
     readings <- selected_readings()
     check <- selected_check()
@@ -414,6 +461,25 @@ manualTbyInput <- function(id) {
 
 manualTby <- function(input, output, session, sn = NULL, selected_check = NULL, selected_readings = NULL) {
   
+  check_parameter <- reactive({
+    
+    check <- selected_check()
+    readings <- selected_readings()
+    
+    if(!is.null(check)) {
+      if("TBY_ID" %in% names(check) & "TBYR_ID" %in% names(readings)) {
+        match <- TRUE
+      } else {
+        match <- FALSE
+      }
+    } else {
+      match <- TRUE
+    }
+    
+    return(match)
+    
+  })
+  
   output$sensor_sn_ui <- renderUI({
     
     ns <- session$ns
@@ -433,6 +499,10 @@ manualTby <- function(input, output, session, sn = NULL, selected_check = NULL, 
   output$sensor_limit_ui <- renderUI({
     
     ns <- session$ns
+    
+    if(!check_parameter())
+      return(NULL)
+    
     check <- selected_check()
     
     if(is.null(check)) {
@@ -450,6 +520,10 @@ manualTby <- function(input, output, session, sn = NULL, selected_check = NULL, 
   output$comment_ui <- renderUI({
     
     ns <- session$ns
+    
+    if(!check_parameter())
+      return(NULL)
+    
     check <- selected_check()
     
     if(is.null(check)) {
@@ -467,6 +541,9 @@ manualTby <- function(input, output, session, sn = NULL, selected_check = NULL, 
   output$before_slider_ui <- renderUI({
     
     ns <- session$ns
+    
+    if(!check_parameter())
+      return(NULL)
     
     readings <- selected_readings()
     check <- selected_check()
@@ -488,6 +565,9 @@ manualTby <- function(input, output, session, sn = NULL, selected_check = NULL, 
     
     ns <- session$ns
     
+    if(!check_parameter())
+      return(NULL)
+    
     readings <- selected_readings()
     check <- selected_check()
     
@@ -507,6 +587,11 @@ manualTby <- function(input, output, session, sn = NULL, selected_check = NULL, 
   output$tby_reading_before_ui <- renderUI({
     
     ns <- session$ns
+    
+    if(!check_parameter())
+      return(NULL)
+    if(is.null(input$reading_count_before)) 
+      return(NULL)
     
     readings <- selected_readings()
     check <- selected_check()
@@ -551,6 +636,12 @@ manualTby <- function(input, output, session, sn = NULL, selected_check = NULL, 
   output$tby_reading_after_ui <- renderUI({
     
     ns <- session$ns
+    
+    if(!check_parameter())
+      return(NULL)
+    
+    if(is.null(input$reading_count_after))
+      return(NULL)
  
     readings <- selected_readings()
     check <- selected_check()
@@ -768,6 +859,25 @@ manualDoInput <- function(id) {
 
 manualDo <- function(input, output, session, sn = NULL, selected_check = NULL, selected_readings = NULL) {
   
+  check_parameter <- reactive({
+    
+    check <- selected_check()
+    readings <- selected_readings()
+    
+    if(!is.null(check)) {
+      if("DO_ID" %in% names(check) & "DOR_ID" %in% names(readings)) {
+        match <- TRUE
+      } else {
+        match <- FALSE
+      }
+    } else {
+      match <- TRUE
+    }
+    
+    return(match)
+    
+  })
+  
   output$sensor_sn_ui <- renderUI({
     
     ns <- session$ns
@@ -786,6 +896,10 @@ manualDo <- function(input, output, session, sn = NULL, selected_check = NULL, s
   output$do_sc_air_saturated_water_ui <- renderUI({
     
     ns <- session$ns
+    
+    if(!check_parameter())
+      return(NULL)
+    
     check <- selected_check()
     if(!is.null(check)) {
       val <- check$SC_AIR_SATURATED_WATER 
@@ -802,6 +916,10 @@ manualDo <- function(input, output, session, sn = NULL, selected_check = NULL, s
   output$do_temp_air_saturated_water_ui <- renderUI({
     
     ns <- session$ns
+    
+    if(!check_parameter())
+      return(NULL)
+    
     check <- selected_check()
     if(!is.null(check)) {
       val <- check$TEMP_AIR_SATURATED_WATER
@@ -818,6 +936,10 @@ manualDo <- function(input, output, session, sn = NULL, selected_check = NULL, s
   output$do_salinity_ui <- renderUI({
     
     ns <- session$ns
+    
+    if(!check_parameter())
+      return(NULL)
+    
     check <- selected_check()
     if(!is.null(check)) {
       val <- check$SALINITY 
@@ -834,6 +956,10 @@ manualDo <- function(input, output, session, sn = NULL, selected_check = NULL, s
   output$do_odo_gain_pre_ui <- renderUI({
     
     ns <- session$ns
+    
+    if(!check_parameter())
+      return(NULL)
+    
     check <- selected_check()
     if(!is.null(check)) {
       val <- check$ODO_GAIN_PRE
@@ -850,6 +976,10 @@ manualDo <- function(input, output, session, sn = NULL, selected_check = NULL, s
   output$do_odo_gain_post_ui <- renderUI({
     
     ns <- session$ns
+    
+    if(!check_parameter())
+      return(NULL)
+    
     check <- selected_check()
     if(!is.null(check)) {
       val <- check$ODO_GAIN_POST 
@@ -866,6 +996,10 @@ manualDo <- function(input, output, session, sn = NULL, selected_check = NULL, s
   output$do_odo_cap_changed_ui <- renderUI({
     
     ns <- session$ns
+    
+    if(!check_parameter())
+      return(NULL)
+    
     check <- selected_check()
     if(!is.null(check)) {
       val <- as.logical(check$ODO_CAP_CHANGED)
@@ -882,6 +1016,10 @@ manualDo <- function(input, output, session, sn = NULL, selected_check = NULL, s
   output$do_odo_cap_sn_ui <- renderUI({
     
     ns <- session$ns
+    
+    if(!check_parameter())
+      return(NULL)
+    
     check <- selected_check()
     if(!is.null(check)) {
       val <- check$ODO_CAP_SN
@@ -898,6 +1036,10 @@ manualDo <- function(input, output, session, sn = NULL, selected_check = NULL, s
   output$do_date_barometer_calibrated_ui <- renderUI({
     
     ns <- session$ns
+    
+    if(!check_parameter())
+      return(NULL)
+    
     check <- selected_check()
     if(!is.null(check)) {
       val <- check$DATE_BAROMETER_CALIBRATED
@@ -914,6 +1056,10 @@ manualDo <- function(input, output, session, sn = NULL, selected_check = NULL, s
   output$do_comment_ui <- renderUI({
     
     ns <- session$ns
+    
+    if(!check_parameter())
+      return(NULL)
+    
     check <- selected_check()
     if(!is.null(check)) {
       val <- check$COMMENT 
@@ -930,6 +1076,10 @@ manualDo <- function(input, output, session, sn = NULL, selected_check = NULL, s
   output$before_ui <- renderUI({
     
     ns <- session$ns
+    
+    if(!check_parameter())
+      return(NULL)
+    
     readings <- selected_readings()
 
     if(!is.null(readings)) {
@@ -965,6 +1115,10 @@ manualDo <- function(input, output, session, sn = NULL, selected_check = NULL, s
   output$after_ui <- renderUI({
     
     ns <- session$ns
+    
+    if(!check_parameter())
+      return(NULL)
+    
     readings <- selected_readings()
     
     if(!is.null(readings)) {
@@ -1154,6 +1308,25 @@ manualPhInput <- function(id) {
 
 manualPh <- function(input, output, session, sn = NULL, selected_check = NULL, selected_readings = NULL) {
   
+  check_parameter <- reactive({
+    
+    check <- selected_check()
+    readings <- selected_readings()
+    
+    if(!is.null(check)) {
+      if("PH_ID" %in% names(check) & "PHR_ID" %in% names(readings)) {
+        match <- TRUE
+      } else {
+        match <- FALSE
+      }
+    } else {
+      match <- TRUE
+    }
+    
+    return(match)
+    
+  })
+  
   output$sensor_ui <- renderUI({
     
     ns <- session$ns
@@ -1172,6 +1345,10 @@ manualPh <- function(input, output, session, sn = NULL, selected_check = NULL, s
   output$comment_ui <- renderUI({
     
     ns <- session$ns
+    
+    if(!check_parameter())
+      return(NULL)
+    
     check <- selected_check()
     
     if(is.null(check)) {
@@ -1188,6 +1365,10 @@ manualPh <- function(input, output, session, sn = NULL, selected_check = NULL, s
   output$reading_count_before_ui <- renderUI({
     
     ns <- session$ns
+    
+    if(!check_parameter())
+      return(NULL)
+    
     readings <- selected_readings()
     
     if(is.null(readings)) {
@@ -1207,6 +1388,10 @@ manualPh <- function(input, output, session, sn = NULL, selected_check = NULL, s
   output$reading_count_after_ui <- renderUI({
     
     ns <- session$ns
+    
+    if(!check_parameter())
+      return(NULL)
+    
     readings <- selected_readings()
     
     if(is.null(readings)) {
@@ -1226,6 +1411,13 @@ manualPh <- function(input, output, session, sn = NULL, selected_check = NULL, s
   output$ph_reading_before_ui <- renderUI({
     
     ns <- session$ns
+    
+    if(!check_parameter())
+      return(NULL)
+    
+    if(is.null(input$reading_count_before))
+      return(NULL)
+    
     readings <- selected_readings()
     
     if(is.null(readings)) {
@@ -1274,6 +1466,13 @@ manualPh <- function(input, output, session, sn = NULL, selected_check = NULL, s
   output$ph_reading_after_ui <- renderUI({
     
     ns <- session$ns
+    
+    if(!check_parameter())
+      return(NULL)
+    
+    if(is.null(input$reading_count_after))
+      return(NULL)
+    
     readings <- selected_readings()
     
     if(is.null(readings)) {
@@ -1488,9 +1687,32 @@ manualWtInput <- function(id) {
 
 manualWt <- function(input, output, session, sn = NULL, selected_check = NULL, selected_readings = NULL) {
   
+  check_parameter <- reactive({
+    
+    check <- selected_check()
+    readings <- selected_readings()
+    
+    if(!is.null(check)) {
+      if(any(c("WT_COMP_ID", "WT_MULTIPOINT_ID") %in% names(check))) {
+        match <- TRUE
+      } else {
+        match <- FALSE
+      }
+    } else {
+      match <- TRUE
+    }
+    
+    return(match)
+    
+  })
+  
   output$sensor_ui <- renderUI({
     
     ns <- session$ns
+    
+    if(!check_parameter())
+      return(NULL)
+    
     check <- selected_check()
     
     if(!is.null(sn())) {
@@ -1507,6 +1729,10 @@ manualWt <- function(input, output, session, sn = NULL, selected_check = NULL, s
   output$comment_ui <- renderUI({
     
     ns <- session$ns
+    
+    if(!check_parameter())
+      return(NULL)
+    
     check <- selected_check()
     
     if(!is.null(check)) {
@@ -1523,6 +1749,10 @@ manualWt <- function(input, output, session, sn = NULL, selected_check = NULL, s
   output$field_sensor_sn_ui <- renderUI({
     
     ns <- session$ns
+    
+    if(!check_parameter())
+      return(NULL)
+    
     check <- selected_check()
     
     if(!is.null(check)) {
@@ -1544,6 +1774,10 @@ manualWt <- function(input, output, session, sn = NULL, selected_check = NULL, s
   output$wt_comparison_datetime_ui <- renderUI({
     
     ns <- session$ns
+    
+    if(!check_parameter())
+      return(NULL)
+    
     check <- selected_check()
     
     if(!is.null(check)) {
@@ -1565,6 +1799,10 @@ manualWt <- function(input, output, session, sn = NULL, selected_check = NULL, s
   output$nist_temp_comp_ui <- renderUI({
     
     ns <- session$ns
+    
+    if(!check_parameter())
+      return(NULL)
+    
     check <- selected_check()
     
     if(!is.null(check)) {
@@ -1585,6 +1823,10 @@ manualWt <- function(input, output, session, sn = NULL, selected_check = NULL, s
   output$mon_temp_comp_ui <- renderUI({
     
     ns <- session$ns
+    
+    if(!check_parameter())
+      return(NULL)
+    
     check <- selected_check()
     
     if(!is.null(check)) {
@@ -1605,6 +1847,10 @@ manualWt <- function(input, output, session, sn = NULL, selected_check = NULL, s
   output$last_2_point_check_ui <- renderUI({
     
     ns <- session$ns
+    
+    if(!check_parameter())
+      return(NULL)
+    
     check <- selected_check()
     
     if(!is.null(check)) {
@@ -1626,6 +1872,10 @@ manualWt <- function(input, output, session, sn = NULL, selected_check = NULL, s
   output$last_5_point_check_ui <- renderUI({
     
     ns <- session$ns
+    
+    if(!check_parameter())
+      return(NULL)
+    
     check <- selected_check()
     
     if(!is.null(check)) {
@@ -1646,6 +1896,10 @@ manualWt <- function(input, output, session, sn = NULL, selected_check = NULL, s
   output$nist_cert_date_ui <- renderUI({
     
     ns <- session$ns
+    
+    if(!check_parameter())
+      return(NULL)
+    
     check <- selected_check()
     
     if(!is.null(check)) {
@@ -1667,6 +1921,10 @@ manualWt <- function(input, output, session, sn = NULL, selected_check = NULL, s
   output$nist_sn_ui <- renderUI({
     
     ns <- session$ns
+    
+    if(!check_parameter())
+      return(NULL)
+    
     check <- selected_check()
     
     if(!is.null(check)) {
@@ -1687,6 +1945,10 @@ manualWt <- function(input, output, session, sn = NULL, selected_check = NULL, s
   output$reading_count_ui <- renderUI({
     
     ns <- session$ns
+    
+    if(!check_parameter())
+      return(NULL)
+    
     readings <- selected_readings()
     
     if(!is.null(readings)) {
@@ -1706,6 +1968,13 @@ manualWt <- function(input, output, session, sn = NULL, selected_check = NULL, s
   output$wt_multipoint_ui <- renderUI({
     
     ns <- session$ns
+    
+    if(!check_parameter())
+      return(NULL)
+    
+    if(is.null(input$reading_count))
+      return(NULL)
+    
     readings <- selected_readings()
     if(is.null(readings)) {
       readings <- data.frame(

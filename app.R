@@ -338,23 +338,37 @@ server <- function(input, output, session) {
     
   })
   
+  output$select_dates_ui <- renderUI({
+    
+    start_date <- Sys.Date() - as.difftime(8760, units = "hours")
+    
+    dateRangeInput("find_cal_dates", "Dates", start = start_date)
+    
+  })
+  
   calibration_list <- reactive({
     
     basetable <- view_base_table()[1]
     
     check <- tbl(dbcon, basetable)
+
     sensor <- tbl(dbcon, "SENSOR") %>%
       select(SENSOR_ID, SENSOR_SN)
+
     calibration <- tbl(dbcon, "CALIBRATION") %>%
       select(CAL_ID, DATE)
-    
+
     matching_cal <- inner_join(check, sensor) %>%
-      inner_join(calibration) %>%
-      filter(DATE >= input$find_cal_dates[1],
+      inner_join(calibration)
+    
+    if(!is.null(input$find_cal_dates)) {
+      matching_cal <- matching_cal %>%
+        filter(DATE >= input$find_cal_dates[1],
              DATE <= input$find_cal_dates[2])
+    }
     
     if(!is.null(input$find_cal_sn)) {
-      if(input$find_cal_sn != "All")
+      if(!(input$find_cal_sn %in% c("All", "")))
         matching_cal <- matching_cal %>%
           filter(SENSOR_SN == input$find_cal_sn)
     }
@@ -363,17 +377,10 @@ server <- function(input, output, session) {
       arrange(DATE)
     
     cal_choices <- pull(matching_cal, CAL_ID)
+
     names(cal_choices) <- pull(matching_cal, DATE)
     
     return(cal_choices)
-    
-  })
-  
-  output$select_dates_ui <- renderUI({
-    
-    start_date <- Sys.Date() - as.difftime(8760, units = "hours")
-    
-    dateRangeInput("find_cal_dates", "Dates", start = start_date)
     
   })
   
@@ -386,6 +393,9 @@ server <- function(input, output, session) {
   selected_calibration_out <- reactive({
     
     input$refresh
+    
+    if(is.null(input$which_cal))
+      return(NULL)
     
     if(input$which_cal == "")
       return(NULL)
@@ -411,7 +421,6 @@ server <- function(input, output, session) {
       select(ends_with("_ID"))
     
     if(reading_basetable != "") {
-      
       reading <- check_table %>%
         inner_join(reading_table) %>%
         collect()
