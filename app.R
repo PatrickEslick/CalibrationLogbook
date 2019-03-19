@@ -13,6 +13,7 @@ ui <- dashboardPage(
   
   dashboardSidebar(
     sidebarMenu(
+      menuItem("Information", tabName = "info"),
       menuItem("View calibrations", tabName = "view_cal"),
       menuItem("New calibration", startExpanded = FALSE,
         menuSubItem("From XML", tabName = "new_cal_xml"),
@@ -27,6 +28,12 @@ ui <- dashboardPage(
   dashboardBody(
     
     tabItems(
+      
+      tabItem(tabName = "info",
+        box(
+          includeMarkdown("help.md")
+        , width = 10)
+      ),
       
       tabItem(tabName = "new_cal_xml",
         box(
