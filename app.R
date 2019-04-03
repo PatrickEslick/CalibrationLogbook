@@ -37,19 +37,31 @@ ui <- dashboardPage(
       
       tabItem(tabName = "new_cal_xml",
         box(
-          h3("Upload an XML file from SVMAQ"),
-          fluidRow(
-                
-            column(4,
-                     
-              fileInput("xml_file", label = "SVMAQ XML file"),
-              actionButton("write_xml", "Record file")
-                     
+          tabsetPanel(
+            tabPanel("Single",
+              h3("Upload an XML file from SVMAQ"),
+              fluidRow(
+                column(4,
+                  fileInput("xml_file", label = "SVMAQ XML file"),
+                  actionButton("write_xml", "Record file")
+                ),
+                column(6,
+                  textOutput("xml_check_text"),
+                  tableOutput("xml_sensor_table")
+                )
+              )
             ),
-            column(6,
-              textOutput("xml_check_text"),
-              tableOutput("xml_sensor_table")
-                     
+            tabPanel("Batch",
+              h3("Upload multiple XML files from SVMAQ"),
+              fluidRow(
+                column(4,
+                  fileInput("batch_xml_file", label = "SVMAQ XML files", multiple = TRUE),
+                  actionButton("write_xml_batch", "Record files")
+                ),
+                column(8,
+                  verbatimTextOutput("file_list")
+                )
+              )
             )
           )
         )
@@ -227,8 +239,44 @@ server <- function(input, output, session) {
       showNotification("File recorded", type = "message")
       
     }
+  })
+  
+  observeEvent(input$write_xml_batch, {
     
-    
+    if(is.null(input$batch_xml_file)) {
+      
+      showNotification("No file selected", type = "error")
+      
+    } else {
+      
+      files <- input$batch_xml_file
+      
+      for(i in 1:nrow(files)) {
+
+        filepath <- files$datapath[i]
+        filename <- files$name[i]
+        
+        write_data <- read_sv_xml(filepath) %>%
+          get_ALL()
+        
+        if(!is.null(write_data)) {
+          max_keys <- get_max_keys(dbcon)
+          write_data %>%
+            add_keys(max_keys, source_file = filename) %>%
+            lookup_sensors(dbcon) %>%
+            write_sv_data(dbcon)
+          message <- paste(filename, "written")
+          showNotification(message, type = "message")
+        } else {
+          message <- paste(filename, "not written")
+          showNotification(message, type = "error")
+        }
+      }
+    }
+  })
+  
+  output$file_list <- renderPrint({
+    input$batch_xml_file
   })
   
   sc_check <- callModule(manualSc, "sc_check1", 

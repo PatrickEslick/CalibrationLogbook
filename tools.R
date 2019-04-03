@@ -8,8 +8,18 @@ library(stringr)
 
 read_sv_xml <- function(xml_path) {
   
-  sv_xml <- read_xml(xml_path)
+  sv_xml <- try({read_xml(xml_path)}, silent = TRUE)
+  if(class(sv_xml) == "try-error") {
+    message("Not an XML file")
+    return(NULL)
+  }
   sv_xml <- xml_ns_strip(sv_xml)
+  
+  if(is.na(xml_find_first(sv_xml, "//UsgsHydroML"))) {
+    message("Not a valid SVMAQ XML file")
+    sv_xml <- NULL
+  }
+  
   return(sv_xml)
   
 }
@@ -340,7 +350,7 @@ get_PH_READING <- function(sv_xml) {
                                 STD_TYPE = vector(), STD_LOT = vector(),
                                 TEMPERATURE = vector(), STD_VALUE = vector(), READING = vector(),
                                 DATETIME = vector(), MILLIVOLTS = vector(), TYPE = vector(),
-                                USED_FOR_RECALIBRATION = vector())
+                                USED_FOR_RECAL = vector())
     
   }
   
@@ -464,6 +474,11 @@ get_CALIBRATION <- function(sv_xml) {
 }
 
 get_ALL <- function(sv_xml) {
+  
+  if(is.null(sv_xml)) {
+    message("Empty SV file")
+    return(NULL)
+  }
   
   all_sv_data <- list()
   all_sv_data[["SENSOR"]] <- get_SENSOR(sv_xml)

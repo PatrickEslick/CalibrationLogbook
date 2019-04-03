@@ -25,14 +25,23 @@ New calibrations can be added manually or from an existing SVMAQ file that inclu
 
 ### From an SVMAQ file
 
-Select "New calibration" > "From XML" from the sidebar menu. Click "Browse..." and use the file broswer to navigate to the XML file you want to upload. Once selected, a table of sensors and a message indicating what calibration data was found in the file will be displayed. To record the file to the database, click "Record file.""
+#### Uploading a single file
+
+Select "New calibration" > "From XML" from the sidebar menu. In the "Single" tab, click "Browse..." and use the file broswer to navigate to the XML file you want to upload. Once selected, a table of sensors and a message indicating what calibration data was found in the file will be displayed. To record the file to the database, click "Record file."  
+
+#### Uploading multiple files
+
+Select "New calibration" > "From XML" from the sidebar menu. In the "Batch" tab, click "Browse..." and use the file broswer to selec the XML Files you want to upload. You can control click to select multiple files, or hit Ctrl + A to select all the files in a folder. To record the files to the database, click "Record files." When files are succesfully written, messages will appear in the lower right corner. You will also see a message for any files that couldn't be written. 
+
+Select 
 
 ### Manually
 
-To manually enter calibration data, select "New calibration" > "Manual" from the sidebar menu. The format for entering data roughly mirrors the format of SVMAQ calibrations. Each parameter has its own tab. Enter any applicable data. Any parameters left blank won't be written to the database. To change the number of readings being entered, drag the "Number of readings" slider to the appropriate number. **Changing the slider position will erase any existing readings, so set it before entering any readings**. To record the data, select the "Record" tab, and click "Record".
+To manually enter calibration data, select "New calibration" > "Manual" from the sidebar menu. The format for entering data roughly mirrors the format of SVMAQ calibrations. Each parameter has its own tab. Enter any applicable data. Any parameters left blank won't be written to the database. To change the number of readings being entered, drag the "Number of readings" slider to the appropriate number. **Changing the slider position will clear any existing readings, so set it before entering any readings**. To record the data, select the "Record" tab, and click "Record".
 
 ## Downloading reports
 
 ### Probe history
 
-The probe history report lists all the calibrations for a particular probe. The plot at the top shows the error over time for each standard, and indicates when the probe was re-calibrated. Select "Reports" > "Probe history" from the sidebar menu. Select the parameter from the "Parameter" drop-down, select the serial number from the "Probe serial number" drop down
+The probe history report lists all the calibrations for a particular probe. The plot at the top shows the error over time for each standard, and indicates when the probe was re-calibrated. Select "Reports" > "Probe history" from the sidebar menu. Select the parameter from the "Parameter" drop-down, select the serial number from the "Probe serial number" drop down, and click "Get report".
+  
