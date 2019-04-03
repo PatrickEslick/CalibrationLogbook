@@ -57,9 +57,6 @@ ui <- dashboardPage(
                 column(4,
                   fileInput("batch_xml_file", label = "SVMAQ XML files", multiple = TRUE),
                   actionButton("write_xml_batch", "Record files")
-                ),
-                column(8,
-                  verbatimTextOutput("file_list")
                 )
               )
             )
@@ -273,10 +270,6 @@ server <- function(input, output, session) {
         }
       }
     }
-  })
-  
-  output$file_list <- renderPrint({
-    input$batch_xml_file
   })
   
   sc_check <- callModule(manualSc, "sc_check1", 
