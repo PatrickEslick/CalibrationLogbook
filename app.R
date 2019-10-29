@@ -4,6 +4,9 @@ library(dplyr)
 library(ggplot2)
 library(knitr)
 library(fs)
+library(RSQLite)
+library(DBI)
+library(dbplyr)
 source("tools.R")
 source("plotting.R")
 source("modules.R")
@@ -101,9 +104,7 @@ ui <- dashboardPage(
         box(
           h3("Find a calibration"),
           fluidRow(
-            column(4, selectInput("find_cal_parm", "Parameter", choices=  
-                                    c("Specific cond at 25C", "Turbidity, FNU", "Dissolved oxygen", "pH",
-                                      "Temperature, water (comparison)", "Temperature, water (multi-point)"))),
+            column(4, uiOutput("find_cal_parm_ui")),
             column(3, uiOutput("sensor_sn_ui")),
             column(4, uiOutput("select_dates_ui"))
           ),
@@ -135,6 +136,10 @@ ui <- dashboardPage(
               conditionalPanel("input.find_cal_parm == 'Temperature, water (multi-point)'",
                 manualWtInput("wt_edit_multi")               
               ),
+              conditionalPanel("!(input.find_cal_parm in ['Specific cond at 25C', 'Turbidity, FNU', 'pH', 'Temperature, water (comparison)', 'Temperature, water (multi-point)']",
+                manualGenInput("gen_edit"),
+                verbatimTextOutput("gen_edit_out")
+              ),
               fluidRow(
                 column(1, actionButton("update", "Update")),
                 column(1, actionButton("delete_check", "Delete")),
@@ -147,8 +152,7 @@ ui <- dashboardPage(
       tabItem("probe_history",
         box(
           h3("Probe history report"),
-          selectInput("probe_history_parameter", label = "Parameter",
-                      choices = c("Specific cond at 25C", "Turbidity, FNU", "pH", "Dissolved oxygen")),
+          uiOutput("probe_history_parameter_ui"),
           uiOutput("probe_history_sn_choices"),
           downloadButton("download_probe_history", "Get report")
         )        
@@ -206,6 +210,9 @@ server <- function(input, output, session) {
     if(nrow(sv_data()[["DO_CHECK"]]) > 0) {
       parms[length(parms) + 1] <- "dissolved oxygen"
     }
+    if(length(sv_data()[["GENERIC"]]) > 0) {
+      parms <- c(parms, map_chr(sv_data()[["GENERIC"]], c("GEN_CHECK", "PARAMETER")))
+    }
     
     parms <- paste(parms, collapse = ", ")
     
@@ -249,12 +256,16 @@ server <- function(input, output, session) {
       files <- input$batch_xml_file
       
       for(i in 1:nrow(files)) {
-
+      
         filepath <- files$datapath[i]
         filename <- files$name[i]
         
+        print(filename)
+        
         write_data <- read_sv_xml(filepath) %>%
           get_ALL()
+        
+        print(write_data)
         
         if(!is.null(write_data)) {
           max_keys <- get_max_keys(dbcon)
@@ -346,6 +357,21 @@ server <- function(input, output, session) {
     
   })
   
+  output$find_cal_parm_ui <- renderUI({
+    
+    generic_parms <- tbl(dbcon, "GEN_CHECK") %>%
+      pull(PARAMETER) %>%
+      unique()
+    
+    ch = c("Specific cond at 25C", "Turbidity, FNU", "Dissolved oxygen", "pH",
+        "Temperature, water (comparison)", "Temperature, water (multi-point)", generic_parms)
+    
+    selectInput("find_cal_parm", "Parameter", choices = ch)
+    
+  })
+  
+  
+  
   output$sensor_sn_ui <- renderUI({
     
     sensors <- sensor_list()
@@ -411,14 +437,19 @@ server <- function(input, output, session) {
     
     if(!is.null(input$find_cal_dates)) {
       matching_cal <- matching_cal %>%
-        filter(DATE >= input$find_cal_dates[1],
-             DATE <= input$find_cal_dates[2])
+        filter(DATE >= local(input$find_cal_dates[1]),
+             DATE <= local(input$find_cal_dates[2]))
     }
     
     if(!is.null(input$find_cal_sn)) {
       if(!(input$find_cal_sn %in% c("All", "")))
         matching_cal <- matching_cal %>%
-          filter(SENSOR_SN == input$find_cal_sn)
+          filter(SENSOR_SN == local(input$find_cal_sn))
+    }
+    
+    if(basetable == "GEN_CHECK") {
+      matching_cal <- matching_cal %>%
+        filter(PARAMETER == local(input$find_cal_parm))
     }
     
     matching_cal <- select(matching_cal, DATE, CAL_ID) %>%
@@ -427,6 +458,8 @@ server <- function(input, output, session) {
     cal_choices <- pull(matching_cal, CAL_ID)
 
     names(cal_choices) <- pull(matching_cal, DATE)
+    
+    print(head(cal_choices))
     
     return(cal_choices)
     
@@ -437,6 +470,7 @@ server <- function(input, output, session) {
     selectizeInput("which_cal", "View data from", choices = calibration_list(), selected = NULL)
     
   })
+  
   
   selected_calibration_out <- reactive({
     
@@ -453,7 +487,12 @@ server <- function(input, output, session) {
     reading_basetable <- view_base_table()[2]
     
     check_table <- tbl(dbcon, check_basetable) %>%
-      filter(CAL_ID == input$which_cal)
+      filter(CAL_ID == local(input$which_cal))
+    
+    if(check_basetable == "GEN_CHECK") {
+      check_table <- check_table %>%
+        filter(PARAMETER == local(input$find_cal_parm))
+    }
     
     if(reading_basetable != "")
       reading_table <- tbl(dbcon, reading_basetable)
@@ -482,9 +521,18 @@ server <- function(input, output, session) {
       names(out) <- c("check", "reading")
       
     }
-
     return(out)
     
+  })
+  
+  selected_calibration_sn <- reactive({
+    if(!is.null(check()))
+      sensor_id <- check()$SENSOR_ID
+    sensor_sn <- tbl(dbcon, "SENSOR") %>%
+      filter(SENSOR_ID == sensor_id) %>%
+      pull(SENSOR_SN)
+    sensor_sn <- sensor_sn[1]
+    return(sensor_sn)
   })
   
   check <- reactive({
@@ -551,9 +599,13 @@ server <- function(input, output, session) {
                               sn = reactive(input$find_cal_sn),
                               selected_check = reactive(check()),
                               selected_readings = reactive(readings()))
+  gen_edit <- callModule(manualGen, "gen_edit",
+                         sn = reactive(selected_calibration_sn()),
+                         selected_check = reactive(check()),
+                         selected_readings = reactive(readings()))
   
-  output$do_edit_out <- renderPrint({
-    print(do_edit())
+  output$gen_edit_out <- renderPrint({
+    print(gen_edit())
   })
   
   observeEvent(input$update, {
@@ -578,13 +630,16 @@ server <- function(input, output, session) {
     } else if(input$find_cal_parm == "Temperature, water (multi-point)") {
       edit <- wt_edit_multi()
       reading_id <- "WTR_MULTIPOINT_ID"
+    } else {
+      edit <- gen_edit()
+      reading_id <- "GENR_ID"
     }
     
     #Look up the sensor
     sensors <- tbl(dbcon, "SENSOR")
     sensor_sn <- edit[[view_base_table()[1]]]$SENSOR_ID
     sensor_id <- sensors %>%
-      filter(SENSOR_SN == sensor_sn, PARAMETER == input$find_cal_parm) %>%
+      filter(SENSOR_SN == sensor_sn, PARAMETER == local(input$find_cal_parm)) %>%
       pull(SENSOR_ID)
     
     #If it's a new sensor, write it to the database
@@ -648,11 +703,24 @@ server <- function(input, output, session) {
            input$delete_keyword)
     
   })
+  
+  output$probe_history_parameter_ui <- renderUI({
+    
+    generic_parms <- tbl(dbcon, "GEN_CHECK") %>%
+      pull(PARAMETER) %>%
+      unique()
+    generic_parms <- generic_parms[generic_parms != "Temperature, water"]
+    
+    ch = c("Specific cond at 25C", "Turbidity, FNU", "Dissolved oxygen", "pH", generic_parms)
+    
+    selectInput("probe_history_parameter", label = "Parameter", choices = ch)
+    
+  })
 
   output$probe_history_sn_choices <- renderUI({
     
     serial_number_choices <- tbl(dbcon, "SENSOR") %>%
-      filter(PARAMETER == input$probe_history_parameter) %>%
+      filter(PARAMETER == local(input$probe_history_parameter)) %>%
       pull(SENSOR_SN)
     
     selectInput("probe_history_sn", "Probe serial number", choices = serial_number_choices)

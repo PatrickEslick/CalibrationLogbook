@@ -9,7 +9,7 @@ library(stringr)
 read_sv_xml <- function(xml_path) {
   
   sv_xml <- try({read_xml(xml_path)}, silent = TRUE)
-  if(class(sv_xml) == "try-error") {
+  if("try-error" %in% class(sv_xml)) {
     message("Not an XML file")
     return(NULL)
   }
@@ -30,7 +30,8 @@ get_SENSOR <- function(sv_xml) {
   
   if(length(sensors) > 0) {
     sns <- xml_find_first(sensors, ".//SerialNumber") %>%
-      xml_text() 
+      xml_text()
+    sns[is.na(sns)] <- "Unspecified"
     parameters <- xml_find_first(sensors, ".//Name") %>%
       xml_text()
     manu <- xml_find_first(sensors, ".//ManufacturerName") %>%
@@ -58,6 +59,8 @@ get_SC_CHECK <- function(sv_xml) {
     
     SENSOR_ID <- xml_find_first(sc_drift, ".//Sensor//SerialNumber") %>%
       xml_text()
+    if(is.na(SENSOR_ID))
+      SENSOR_ID <- "Unspecified"
     CELL_CONSTANT <- xml_find_first(sc_drift, ".//CellRangeMeasurePreCal") %>%
       xml_text()
     AIR_READING <- xml_find_first(sc_drift, ".//InAirMeasure") %>%
@@ -102,7 +105,7 @@ get_SC_READING <- function(sv_xml) {
     DATETIME <- xml_find_first(sc_readings, ".//ReadingDateTime") %>%
       xml_text() %>%
       ymd_hms() %>%
-      as.character(format = "%Y-%m-%d %H:%M:%S")
+      as.character(format="%Y-%m-%d %H:%M:%S %Z")
     TYPE <- xml_find_first(sc_readings, ".//CalibrationCode") %>%
       xml_text()
     USED_FOR_RECAL <- xml_find_first(sc_readings, ".//UsedForRecalibration") %>%
@@ -132,6 +135,8 @@ get_TBY_CHECK <- function(sv_xml) {
     
     SENSOR_ID <- xml_find_first(tby_drift, ".//Sensor//SerialNumber") %>%
       xml_text()
+    if(is.na(SENSOR_ID))
+      SENSOR_ID <- "Unspecified"
     SENSOR_LIMIT <- xml_find_first(tby_drift, ".//MaximumMeasure") %>%
       xml_text()
     COMMENT <- xml_find_first(tby_drift, ".//Comment") %>%
@@ -202,6 +207,8 @@ get_DO_CHECK <- function(sv_xml) {
     
     SENSOR_ID <- xml_find_first(do_drift, ".//Sensor//SerialNumber") %>%
       xml_text()
+    if(is.na(SENSOR_ID))
+      SENSOR_ID <- "Unspecified"
     SC_AIR_SATURATED_WATER <- xml_find_first(do_drift, ".//ConductanceOfWater") %>%
       xml_text()
     TEMP_AIR_SATURATED_WATER <- xml_find_first(do_drift, ".//TemperatureOfWater") %>%
@@ -210,7 +217,7 @@ get_DO_CHECK <- function(sv_xml) {
       xml_text()
     DATE_BAROMETER_CALIBRATED <- xml_find_first(do_drift, ".//BarometerCalibrationDate") %>%
       xml_text() %>%
-      ymd_hms() %>%
+      ymd() %>%
       as.character(format = "%Y-%m-%d")
     ODO_GAIN_PRE <- xml_find_first(do_drift, ".//PreCalDoGainMeasure") %>%
       xml_text()
@@ -261,7 +268,7 @@ get_DO_READING <- function(sv_xml) {
     DATETIME <- xml_find_first(do_readings, ".//ReadingDateTime") %>%
       xml_text() %>%
       ymd_hms() %>%
-      as.character(format = "%Y-%m-%d %H:%M:%S")
+      as.character(format="%Y-%m-%d %H:%M:%S %Z")
     ZERO_READING <- xml_find_first(do_readings, ".//DissolvedOxygenZeroMeasure") %>%
       xml_text()
     TYPE <- xml_find_first(do_readings, ".//CalibrationCode") %>%
@@ -291,6 +298,8 @@ get_PH_CHECK <- function(sv_xml) {
     
     SENSOR_ID <- xml_find_first(ph_drift, ".//Sensor//SerialNumber") %>%
       xml_text()
+    if(is.na(SENSOR_ID))
+      SENSOR_ID <- "Unspecified"
     COMMENT <- xml_find_first(ph_drift, ".//Comment") %>%
       xml_text()
     
@@ -332,7 +341,7 @@ get_PH_READING <- function(sv_xml) {
     DATETIME <- xml_find_first(ph_readings, ".//ReadingDateTime") %>%
       xml_text() %>%
       ymd_hms() %>%
-      as.character(format="%Y-%m-%d %H:%M:%S")
+      as.character(format="%Y-%m-%d %H:%M:%S %Z")
     MILLIVOLTS <- xml_find_first(ph_readings, ".//VoltsMeasure") %>%
       xml_text()
     TYPE <- xml_find_first(ph_readings, ".//CalibrationCode") %>%
@@ -358,6 +367,84 @@ get_PH_READING <- function(sv_xml) {
   
 }
 
+#There may be multiple generic checks so this is written to act on a single node
+get_GEN_CHECK <- function(node) {
+  
+  SENSOR_ID <- xml_find_first(node, ".//Sensor//SerialNumber") %>%
+    xml_text()
+  if(is.na(SENSOR_ID))
+    SENSOR_ID <- "Unspecified"
+  PARAMETER <- xml_find_first(node, ".//Parameter//Name") %>%
+    xml_text()
+  COMMENT <- xml_find_first(node, ".//Comment") %>%
+    xml_text()
+  
+  gen_check_df <- data.frame(SENSOR_ID, PARAMETER, COMMENT, 
+                             stringsAsFactors = FALSE)
+  return(gen_check_df)
+
+}
+
+get_GEN_READING <- function(node) {
+  
+  gen_readings <- xml_find_all(node, ".//DriftCheckGenericReading")
+  
+  if(length(gen_readings) > 0) {
+    
+    STD_VALUE <- xml_find_first(gen_readings, ".//StandardMeasure") %>%
+      xml_text()
+    STD_EXPIRATION <- xml_find_first(gen_readings, ".//ExpirationDate") %>%
+      xml_text()
+    STD_TYPE <- xml_find_first(gen_readings, ".//StandardCode") %>%
+      xml_text()
+    STD_LOT <- xml_find_first(gen_readings, ".//LotNumber") %>%
+      xml_text()
+    READING <- xml_find_first(gen_readings, ".//GenericDriftMeasure") %>%
+      xml_text()
+    TEMPERATURE <- xml_find_first(gen_readings, ".//TemperatureMeasure") %>%
+      xml_text()
+    DATETIME <- xml_find_first(gen_readings, ".//ReadingDateTime") %>%
+      xml_text() %>%
+      ymd_hms() %>%
+      as.character(format="%Y-%m-%d %H:%M:%S %Z")
+    TYPE <- xml_find_first(gen_readings, ".//CalibrationCode") %>%
+      xml_text()
+    USED_FOR_RECAL <- xml_find_first(gen_readings, ".//UsedForRecalibration") %>%
+      xml_text()
+    
+    gen_reading_df <- data.frame(STD_VALUE, STD_EXPIRATION, STD_TYPE, STD_LOT, READING,
+                                 TEMPERATURE, DATETIME, TYPE, USED_FOR_RECAL,
+                                 stringsAsFactors = FALSE)
+    
+  } else {
+    
+    gen_reading_df <- data.frame(STD_VALUE = vector(), STD_EXPIRATION = vector(),
+                                 STD_LOT = vector(), READING = vector(), TEMPERATURE = vector(),
+                                 DATETIME = vector(), TYPE = vector(), USED_FOR_RECAL = vector(),
+                                 stringsAsFactors = FALSE)
+  }
+  
+}
+
+get_GENERIC <- function(sv_xml) {
+  
+  gen_nodes <- xml_find_all(sv_xml, ".//DriftCheckGeneric")
+  
+  gen_all <- list()
+  
+  if(length(gen_nodes) > 0) {
+    for(i in gen_nodes) {
+      gen_check <- get_GEN_CHECK(i)
+      gen_reading <- get_GEN_READING(i)
+      gen_i <- list(GEN_CHECK = gen_check, GEN_READING = gen_reading)
+      gen_all[[length(gen_all) + 1]] <- gen_i
+    }
+  }
+  
+  return(gen_all)
+  
+}
+
 get_WT_MULTIPOINT_CHECK <- function(sv_xml) {
   
   wt_drift <- xml_find_all(sv_xml, ".//DriftCheckWaterTemperature")
@@ -366,6 +453,8 @@ get_WT_MULTIPOINT_CHECK <- function(sv_xml) {
     
     SENSOR_ID <- xml_find_first(wt_drift, ".//Sensor//SerialNumber") %>%
       xml_text()
+    if(is.na(SENSOR_ID))
+      SENSOR_ID <- "Unspecified"
     NIST_CERT_DATE <- xml_find_first(wt_drift, ".//NistAstmCertificationDate") %>%
       xml_text()
     NIST_SN <- xml_find_first(wt_drift, ".//NistSerialNumber") %>%
@@ -401,7 +490,7 @@ get_WT_MULTIPOINT_READING <- function(sv_xml) {
     DATETIME <- xml_find_first(wt_readings, ".//ReadingDateTime") %>%
       xml_text() %>%
       ymd_hms() %>%
-      as.character(format="%Y-%m-%d %H:%M:%S")
+      as.character(format="%Y-%m-%d %H:%M:%S %Z")
     
     wt_reading_df <- data.frame(NIST_READING, MONITOR_READING, DATETIME,
                                 stringsAsFactors = FALSE)
@@ -425,12 +514,14 @@ get_WT_COMPARISON <- function(sv_xml) {
     
     SENSOR_ID <- xml_find_first(wt_drift, ".//Sensor//SerialNumber") %>%
       xml_text()
+    if(is.na(SENSOR_ID))
+      SENSOR_ID <- "Unspecified"
     FIELD_SENSOR_SN <- xml_find_first(wt_drift, ".//FieldSensor//SerialNumber") %>%
       xml_text()
     DATETIME <- xml_find_first(wt_drift, ".//ReadingDateTime") %>%
       xml_text() %>%
       ymd_hms() %>%
-      as.character(format="%Y-%m-%d %H:%M:%S")
+      as.character(format="%Y-%m-%d %H:%M:%S %Z")
     CHECK_MEASURE <- xml_find_first(wt_drift, ".//WaterTemperatureMeterMeasure") %>%
       xml_text()
     SENSOR_MEASURE <- xml_find_first(wt_drift, ".//WaterTemperatureMeasure") %>%
@@ -493,6 +584,7 @@ get_ALL <- function(sv_xml) {
   all_sv_data[["WT_COMPARISON_CHECK"]] <- get_WT_COMPARISON(sv_xml)
   all_sv_data[["WT_MULTIPOINT_CHECK"]] <- get_WT_MULTIPOINT_CHECK(sv_xml)
   all_sv_data[["WT_MULTIPOINT_READING"]] <- get_WT_MULTIPOINT_READING(sv_xml)
+  all_sv_data[["GENERIC"]] <- get_GENERIC(sv_xml)
   all_sv_data[["CALIBRATION"]] <- get_CALIBRATION(sv_xml)
   
   return(all_sv_data)
@@ -506,11 +598,14 @@ add_keys <- function(all_sv_data, max_keys, source_file) {
   all_sv_data[["SOURCE"]] <- source
   
   #Find the date of the first reading
+  generic_dates <- map(all_sv_data[["GENERIC"]], c("GEN_READING", "DATETIME")) %>%
+    unlist()
   reading_dates <- c(all_sv_data[["SC_READING"]]$DATETIME, all_sv_data[["TBY_READING"]]$DATETIME,
                      all_sv_data[["PH_READING"]]$DATETIME, all_sv_data[["DO_READING"]]$DATETIME,
                      all_sv_data[["WT_COMPARISON_CHECK"]]$DATETIME,
-                     all_sv_data[["WT_MULTIPOINT_READING"]]$DATETIME) %>%
-    as.POSIXct()
+                     all_sv_data[["WT_MULTIPOINT_READING"]]$DATETIME, generic_dates) %>%
+    as.Date() %>%
+    na.omit()
   if(length(reading_dates) > 0) {
     cal_date <- min(reading_dates) %>% as.character(format="%Y-%m-%d")
   } else {
@@ -651,6 +746,23 @@ add_keys <- function(all_sv_data, max_keys, source_file) {
     
   }
   
+  if(length(all_sv_data[["GENERIC"]]) > 0) {
+    gen_id <- max_keys["GEN_ID"]
+    genr_id <- max_keys["GENR_ID"]
+    for(i in seq_along(all_sv_data[["GENERIC"]])) {
+      all_sv_data[["GENERIC"]][[i]][["GEN_CHECK"]]$GEN_ID <- 1 + gen_id
+      gen_id <- gen_id + 1
+      all_sv_data[["GENERIC"]][[i]][["GEN_CHECK"]]$CAL_ID <- calibration$CAL_ID
+      if(nrow(all_sv_data[["GENERIC"]][[i]][["GEN_READING"]]) > 0) {
+        all_sv_data[["GENERIC"]][[i]][["GEN_READING"]]$GENR_ID <- 
+          genr_id + 1:nrow(all_sv_data[["GENERIC"]][[i]][["GEN_READING"]])
+        genr_id <- genr_id + nrow(all_sv_data[["GENERIC"]][[i]][["GEN_READING"]])
+        all_sv_data[["GENERIC"]][[i]][["GEN_READING"]]$GEN_ID <- 
+          all_sv_data[["GENERIC"]][[i]][["GEN_CHECK"]]$GEN_ID
+      }
+    }
+  }
+  
   return(all_sv_data)
   
 }
@@ -774,6 +886,22 @@ get_max_keys <- function(dbcon) {
   } else {
     max_wtr_multipoint_id <- 0
   }
+  
+  gen_check_id <- tbl(dbcon, "GEN_CHECK") %>%
+    pull(GEN_ID)
+  if(length(gen_check_id) > 0) {
+    max_gen_id <- max(gen_check_id)
+  } else {
+    max_gen_id <- 0
+  }
+  
+  gen_reading_id <- tbl(dbcon, "GEN_READING") %>%
+    pull(GENR_ID)
+  if(length(gen_reading_id) > 0) {
+    max_genr_id <- max(gen_reading_id) 
+  } else {
+    max_genr_id <- 0
+  }
 
   max_keys <- c("CAL_ID" = max_cal_id, "SOURCE_ID" = max_source_id,
                 "SC_ID" = max_sc_id, "SCR_ID" = max_scr_id,
@@ -783,6 +911,7 @@ get_max_keys <- function(dbcon) {
                 "WT_COMP_ID" = max_wt_comp_id, 
                 "WT_MULTIPOINT_ID" = max_wt_multipoint_id,
                 "WTR_MULTIPOINT_ID" = max_wtr_multipoint_id,
+                "GEN_ID" = max_gen_id,  "GENR_ID" = max_genr_id,
                 "SENSOR_ID" = max_sensor_id)
   
   return(max_keys)
@@ -873,6 +1002,17 @@ lookup_sensors <- function(all_sv_data, dbcon) {
     
   }
   
+  if(length(all_sv_data[["GENERIC"]]) > 0) {
+    for(i in seq_along(all_sv_data[["GENERIC"]])) {
+      parameter <- all_sv_data[["GENERIC"]][[i]][["GEN_CHECK"]]$PARAMETER
+      gen_sensor_sn <- all_sv_data[["GENERIC"]][[i]][["GEN_CHECK"]]$SENSOR_ID
+      gen_sensor_id <- sensors %>%
+        filter(SENSOR_SN == gen_sensor_sn, PARAMETER == parameter) %>%
+        pull(SENSOR_ID)
+      all_sv_data[["GENERIC"]][[i]][["GEN_CHECK"]]$SENSOR_ID <- gen_sensor_id
+    }
+  }
+  
   return(all_sv_data)
   
 }
@@ -936,6 +1076,18 @@ write_sv_data <- function(all_sv_data, dbcon) {
   tables <- c("SENSOR", "SOURCE","CALIBRATION", "SC_CHECK", "SC_READING", "TBY_CHECK", "TBY_READING",
               "DO_CHECK", "DO_READING", "PH_CHECK", "PH_READING", "WT_COMPARISON_CHECK",
               "WT_MULTIPOINT_CHECK", "WT_MULTIPOINT_READING")
+  
+  if(length(all_sv_data[["GENERIC"]]) > 0) {
+    
+    write[["GEN_CHECK"]] <- map_dfr(all_sv_data[["GENERIC"]], "GEN_CHECK") %>%
+      select(GEN_ID, CAL_ID, SENSOR_ID, PARAMETER, COMMENT)
+    write[["GEN_READING"]] <- map_dfr(all_sv_data[["GENERIC"]], "GEN_READING") %>%
+      select(GENR_ID, GEN_ID, STD_VALUE, STD_EXPIRATION, STD_TYPE, STD_LOT, READING, TEMPERATURE,
+             DATETIME, TYPE, USED_FOR_RECAL)
+    tables <- c(tables, "GEN_CHECK", "GEN_READING")
+    
+  }
+  
   
   for(i in tables) {
 
@@ -1026,8 +1178,13 @@ combine_manual <- function(monitor_sn, sc_list, tby_list, do_list, ph_list, wt_l
 
 delete_everything <- function(dbcon) {
   
-  tables <- c("PH_READING", "PH_CHECK", "DO_READING", "DO_CHECK", "TBY_READING", "TBY_CHECK", "SC_READING", "SC_CHECK",
-              "WT_MULTIPOINT_READING", "WT_MULTIPOINT_CHECK", "WT_COMPARISON_CHECK","CALIBRATION", "SOURCE", "SENSOR")
+  tables <- c("GEN_READING","GEN_CHECK",
+              "PH_READING", "PH_CHECK", 
+              "DO_READING", "DO_CHECK", 
+              "TBY_READING", "TBY_CHECK", 
+              "SC_READING", "SC_CHECK",
+              "WT_MULTIPOINT_READING", "WT_MULTIPOINT_CHECK", "WT_COMPARISON_CHECK",
+              "CALIBRATION", "SOURCE", "SENSOR")
   
   for(i in tables) {
     statement <- paste("DELETE FROM", i)
@@ -1054,6 +1211,12 @@ false_if_null <- function(x) {
   if(is.na(x)) {
     x <- FALSE
   }
+  if(x == "false") {
+    x <- FALSE
+  } 
+  if(x == "true") {
+    x <- TRUE
+  }
   return(x)
 }
 
@@ -1072,7 +1235,7 @@ get_cal_list <- function(parameter, serial_number, dbcon) {
   } else if(parameter == "Temperature, water (multi-point)") {
     basetables <- c("WT_MULTIPOINT_CHECK", "WT_MULTIPOINT_READING", "WT_MULTIPOINT_ID")
   } else {
-    basetables <- c("GEN_CHECK", "GEN_READING")
+    basetables <- c("GEN_CHECK", "GEN_READING", "GEN_ID")
   }
   
   basetable <- basetables[1]
@@ -1148,17 +1311,27 @@ update <- function(parameter, check, readings, dbcon) {
     reading_table <- "WT_MULTIPOINT_READING"
     check_id <- "WT_MULTIPOINT_ID"
     reading_id <- "WTR_MULTIPOINT_ID"
+  } else {
+    check_table <- "GEN_CHECK"
+    reading_table <- "GEN_READING"
+    check_id <- "GEN_ID"
+    reading_id <- "GENR_ID"
   }
   
   this_check <- check[1,] %>% pull(check_id)
   
+  print(readings)
+  print(check)
+  
   if(reading_id != "") {
     delete_reading <- paste("DELETE FROM", reading_table, "WHERE", check_id, "=", this_check)
+    print(delete_reading)
     rs <- dbSendStatement(dbcon, delete_reading)
     dbClearResult(rs)
   }
   
   delete_check <- paste("DELETE FROM", check_table, "WHERE", check_id, "=", this_check)
+  print(delete_check)
   rs <- dbSendStatement(dbcon, delete_check)
   dbClearResult(rs)
   
@@ -1206,6 +1379,11 @@ delete <- function(parameter, check, readings, dbcon, keyword) {
     reading_table <- "WT_MULTIPOINT_READING"
     check_id <- "WT_MULTIPOINT_ID"
     reading_id <- "WTR_MULTIPOINT_ID"
+  } else {
+    check_table <- "GEN_CHECK"
+    reading_table <- "GEN_READING"
+    check_id <- "GEN_ID"
+    reading_id <- "GENR_ID"
   }
   
   this_check <- check[1,] %>% pull(check_id)
