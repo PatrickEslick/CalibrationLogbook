@@ -1,4 +1,4 @@
-##########################################################################################################################################################
+#####SC###################################################################################################################################################
 #
 # SC
 # Module for getting specific conductance calibration data
@@ -416,7 +416,7 @@ manualSc <- function(input, output, session, sn = NULL, selected_check = NULL, s
   
 }
 
-##########################################################################################################################################################
+#####TBY##################################################################################################################################################
 #
 # TBY
 # Module for getting turbidity calibration data
@@ -798,7 +798,7 @@ manualTby <- function(input, output, session, sn = NULL, selected_check = NULL, 
   
 }
 
-##########################################################################################################################################################
+#####DO###################################################################################################################################################
 #
 # DO
 # Module for getting dissolved oxygen calibration data
@@ -1270,7 +1270,7 @@ return(do_check_list)
   
 }
 
-##########################################################################################################################################################
+#####pH###################################################################################################################################################
 #
 # pH
 # Module for getting pH calibration data
@@ -1634,7 +1634,7 @@ manualPh <- function(input, output, session, sn = NULL, selected_check = NULL, s
   
 }
 
-##########################################################################################################################################################
+#####WT###################################################################################################################################################
 #
 # WT
 # Module for getting water temperature calibration data
@@ -2123,5 +2123,393 @@ manualWt <- function(input, output, session, sn = NULL, selected_check = NULL, s
   })
   
   return(wt_list)
+  
+}
+
+#####GEN####################################################################################################################################################
+#
+# GEN
+# Module for getting generic calibration data
+#
+##########################################################################################################################################################
+
+
+manualGenInput <- function(id) {
+  
+  ns <- NS(id)
+  
+  tagList(
+    fluidRow(
+      column(2, uiOutput(ns("sensor_sn_ui"))),
+      column(4, uiOutput(ns("parameter_ui")))
+    ),
+    uiOutput(ns("comment_ui")),
+    tabsetPanel(
+      tabPanel("Calibration",
+               fluidRow(
+                 column(2, uiOutput(ns("before_slider_ui")))
+               ),
+               uiOutput(ns("gen_reading_before_ui"))
+      ),
+      tabPanel("Post-calibration",
+               fluidRow(
+                 column(2, uiOutput(ns("after_slider_ui")))
+               ),
+               uiOutput(ns("gen_reading_after_ui"))
+      )
+    )
+  )
+  
+}
+
+manualGen <- function(input, output, session, sn = NULL, selected_check = NULL, selected_readings = NULL) {
+  
+  check_parameter <- reactive({
+    
+    check <- selected_check()
+    readings <- selected_readings()
+    
+    if(!is.null(check)) {
+      if("GEN_ID" %in% names(check) & "GENR_ID" %in% names(readings)) {
+        match <- TRUE
+      } else {
+        match <- FALSE
+      }
+    } else {
+      match <- TRUE
+    }
+
+    return(match)
+    
+  })
+  
+  output$sensor_sn_ui <- renderUI({
+    
+    ns <- session$ns
+    
+    if(!check_parameter())
+      return(NULL)
+    
+    readings <- selected_readings()
+    check <- selected_check()
+    
+    if(is.null(check)) {
+      val <- ""
+    } else {
+      val <- sn()
+    }
+    
+    textInput(ns("gen_sensor_sn"), "Sensor serial number", placeholder = "12A34567", value = val)
+    
+  })
+  
+  outputOptions(output, "sensor_sn_ui", suspendWhenHidden = FALSE)
+  
+  output$parameter_ui <- renderUI({
+    
+    ns <- session$ns
+    
+    if(!check_parameter())
+      return(NULL)
+    
+    check <- selected_check()
+    
+    if(is.null(check)) {
+      val <- ""
+    } else {
+      val <- check$PARAMETER
+    }
+    
+    textInput(ns("gen_parameter"), "Parameter", value = val)
+    
+  })
+  
+  outputOptions(output, "parameter_ui", suspendWhenHidden = FALSE)
+  
+  output$comment_ui <- renderUI({
+    
+    ns <- session$ns
+    
+    if(!check_parameter())
+      return(NULL)
+    
+    readings <- selected_readings()
+    check <- selected_check()
+    
+    if(is.null(check)) {
+      val <- ""
+    } else {
+      val <- check$COMMENT
+    }
+    
+    textInput(ns("gen_comment"), "Comment", width = "65%", val = val)
+    
+  })
+  
+  outputOptions(output, "comment_ui", suspendWhenHidden = FALSE)
+  
+  output$before_slider_ui <- renderUI({
+    
+    ns <- session$ns
+    
+    if(!check_parameter())
+      return(NULL)
+    
+    readings <- selected_readings()
+    check <- selected_check()
+    
+    if(is.null(readings)) {
+      val <- 1
+    } else {
+      val <- nrow(readings[readings$TYPE == "CALI",])
+      if(val == 0)
+        val <- 1
+    }
+    
+    sliderInput(ns("reading_count_before"), label = "Number of readings", min = 1, max = 5, value = val, step = 1)
+    
+  })
+  
+  outputOptions(output, "before_slider_ui", suspendWhenHidden = FALSE)
+  
+  output$after_slider_ui <- renderUI({
+    
+    ns <- session$ns
+    
+    if(!check_parameter())
+      return(NULL)
+    
+    readings <- selected_readings()
+    check <- selected_check()
+    
+    if(is.null(readings)) {
+      val <- 1
+    } else {
+      val <- nrow(readings[readings$TYPE == "RECL",])
+      if(val == 0)
+        val <- 1
+    }
+    
+    sliderInput(ns("reading_count_after"), label = "Number of readings", min = 1, max = 5, value = val, step = 1)
+    
+  })
+  
+  outputOptions(output, "after_slider_ui", suspendWhenHidden = FALSE)
+  
+  output$gen_reading_before_ui <- renderUI({
+    
+    ns <- session$ns
+    
+    if(!check_parameter())
+      return(NULL)
+    
+    if(is.null(input$reading_count_before))
+      return(NULL)
+    
+    readings <- selected_readings()
+    check <- selected_check()
+    
+    if(is.null(readings)) {
+      before <- data.frame(
+        STD_VALUE = rep("", input$reading_count_before),
+        STD_EXPIRATION = rep("", input$reading_count_before),
+        STD_TYPE = rep("KCl", input$reading_count_before),
+        STD_LOT = rep("", input$reading_count_before),
+        READING = rep("", input$reading_count_before),
+        TEMPERATURE = rep("", input$reading_count_before),
+        DATETIME = rep(as.character(Sys.time(), format = "%Y-%m-%d %H:%M"), input$reading_count_before)
+      )
+    } else {
+      before <- readings %>%
+        filter(TYPE == "CALI")
+    }
+    
+    lapply(1:input$reading_count_before, function(i) {
+      fluidRow(
+        column(1, textInput(ns(paste0("b_std_value", i)), label = "Std. value",
+                            value = before$STD_VALUE[i])),
+        column(1, textInput(ns(paste0("b_std_expiration", i)), label = "Std. expiration",
+                            placeholder = "yyyy-mm-dd",
+                            value = before$STD_EXPIRATION[i])),
+        column(1, selectInput(ns(paste0("b_std_type", i)), label = "Std. type",
+                              choices = c("KCl", "DI", "Other"),
+                              selected = before$STD_TYPE[i])),
+        column(1, textInput(ns(paste0("b_std_lot", i)), label = "Std. lot",
+                            value = before$STD_LOT[i])),
+        column(1, textInput(ns(paste0("b_reading", i)), label = "Reading",
+                            value = before$READING[i])),
+        column(1, textInput(ns(paste0("b_temperature", i)), label = "Temperature",
+                            value = before$TEMPERATURE[i])),
+        column(1, textInput(ns(paste0("b_datetime", i)), label = "Date/Time",
+                            value = before$DATETIME[i]))
+      )
+    })
+  })
+  outputOptions(output, "gen_reading_before_ui", suspendWhenHidden = FALSE)
+  
+  output$gen_reading_after_ui <- renderUI({
+    
+    ns <- session$ns
+    
+    if(!check_parameter())
+      return(NULL)
+    
+    if(is.null(input$reading_count_before))
+      return(NULL)
+    
+    readings <- selected_readings()
+    check <- selected_check()
+    
+    if(is.null(readings)) {
+      after <- data.frame(
+        STD_VALUE = rep("", input$reading_count_after),
+        STD_EXPIRATION = rep("", input$reading_count_after),
+        STD_TYPE = rep("KCl", input$reading_count_after),
+        STD_LOT = rep("", input$reading_count_after),
+        READING = rep("", input$reading_count_after),
+        TEMPERATURE = rep("", input$reading_count_after),
+        DATETIME = rep(as.character(Sys.time(), format = "%Y-%m-%d %H:%M"), input$reading_count_after),
+        USED_FOR_RECAL = rep(FALSE, input$reading_count_after)
+      )
+    } else {
+      after <- readings %>%
+        filter(TYPE == "RECL")
+      after$USED_FOR_RECAL[is.na(after$USED_FOR_RECAL)] <- FALSE
+    }
+    
+    lapply(1:input$reading_count_after, function(i) {
+      fluidRow(
+        column(1, textInput(ns(paste0("a_std_value", i)), label = "Std. value",
+                            value = after$STD_VALUE[i])),
+        column(1, textInput(ns(paste0("a_std_expiration", i)), label = "Std. expiration",
+                            placeholder = "yyyy-mm-dd",
+                            value = after$STD_EXPIRATION[i])),
+        column(1, selectInput(ns(paste0("a_std_type", i)), label = "Std. type",
+                              choices = c("KCl", "DI water", "Other"),
+                              selected = after$STD_TYPE[i])),
+        column(1, textInput(ns(paste0("a_std_lot", i)), label = "Std. lot",
+                            value = after$STD_LOT[i])),
+        column(1, textInput(ns(paste0("a_reading", i)), label = "Reading",
+                            value = after$READING[i])),
+        column(1, textInput(ns(paste0("a_temperature", i)), label = "Temperature",
+                            value = after$TEMPERATURE[i])),
+        column(1, textInput(ns(paste0("a_datetime", i)), label = "Date/Time",
+                            value = after$DATETIME[i])),
+        column(1, checkboxInput(ns(paste0("a_used", i)), label = "Used for recal",
+                                value = false_if_null(after$USED_FOR_RECAL[i])))
+      )
+    })
+  })
+  outputOptions(output, "gen_reading_after_ui", suspendWhenHidden = FALSE)
+  
+  gen_check_list <- reactive({
+    
+    readings <- selected_readings()
+    check <- selected_check()
+    
+    if(input$gen_sensor_sn != "") {
+      
+      #Get data for GEN_CHECK table
+      
+      SENSOR_ID <- input$gen_sensor_sn
+      COMMENT <- empty_if_null(input$gen_comment)
+      PARAMETER <- input$gen_parameter
+      
+      if(!is.null(check)) {
+        GEN_ID = check$GEN_ID[1]
+        CAL_ID = check$CAL_ID[1]
+        gen_check_df <- data.frame(GEN_ID, CAL_ID, SENSOR_ID, PARAMETER, COMMENT,
+                                  stringsAsFactors = FALSE)
+      } else {
+        
+        gen_check_df <- data.frame(SENSOR_ID, PARAMETER, COMMENT,
+                                  stringsAsFactors = FALSE)
+      }
+      
+    } else {
+      
+      gen_check_df <- data.frame(SENSOR_ID = vector(), PARAMETER = vector(), COMMENT = vector())
+      
+    }
+    
+    # print(gen_check_df)
+    
+    #Get data for GEN_READING table
+    
+    STD_VALUE <- vector()
+    STD_EXPIRATION <- vector()
+    STD_TYPE <- vector()
+    STD_LOT <- vector()
+    READING <- vector()
+    TEMPERATURE <- vector()
+    DATETIME <- vector()
+    TYPE <- vector()
+    USED_FOR_RECAL <- vector()
+    
+    # Get the before data
+    if(!is.null(input$reading_count_before)) {
+      for(i in 1:input$reading_count_before) {
+        
+        if(!is.null(input[[paste0("b_std_value", i)]])) {
+          if(input[[paste0("b_std_value", i)]] != "") {
+            STD_VALUE[length(STD_VALUE) + 1] <- input[[paste0("b_std_value", i)]]
+            STD_EXPIRATION[length(STD_EXPIRATION) + 1] <- empty_if_null(input[[paste0("b_std_expiration", i)]])
+            STD_TYPE[length(STD_TYPE) + 1] <- empty_if_null(input[[paste0("b_std_type", i)]])
+            STD_LOT[length(STD_LOT) + 1] <- empty_if_null(input[[paste0("b_std_lot", i)]])
+            READING[length(READING) + 1] <- empty_if_null(input[[paste0("b_reading", i)]])
+            TEMPERATURE[length(TEMPERATURE) + 1] <- empty_if_null(input[[paste0("b_temperature", i)]])
+            DATETIME[length(DATETIME) + 1] <- empty_if_null(input[[paste0("b_datetime", i)]])
+            TYPE[length(TYPE) + 1] <- "CALI"
+            USED_FOR_RECAL[length(USED_FOR_RECAL) + 1] <- FALSE
+          }
+        }
+      }
+    }
+    
+    #Get the after data
+    if(!is.null(input$reading_count_after)) {
+      for(i in 1:input$reading_count_after) {
+        
+        if(!is.null(input[[paste0("a_std_value", i)]])) {
+          if(input[[paste0("a_std_value", i)]] != "") {
+            STD_VALUE[length(STD_VALUE) + 1] <- input[[paste0("a_std_value", i)]]
+            STD_EXPIRATION[length(STD_EXPIRATION) + 1] <- empty_if_null(input[[paste0("a_std_expiration", i)]])
+            STD_TYPE[length(STD_TYPE) + 1] <- empty_if_null(input[[paste0("a_std_type", i)]])
+            STD_LOT[length(STD_LOT) + 1] <- empty_if_null(input[[paste0("a_std_lot", i)]])
+            READING[length(READING) + 1] <- empty_if_null(input[[paste0("a_reading", i)]])
+            TEMPERATURE[length(TEMPERATURE) + 1] <- empty_if_null(input[[paste0("a_temperature", i)]])
+            DATETIME[length(DATETIME) + 1] <- empty_if_null(input[[paste0("a_datetime", i)]])
+            TYPE[length(TYPE) + 1] <- "RECL"
+            USED_FOR_RECAL[length(USED_FOR_RECAL) + 1] <- input[[paste0("a_used", i)]]
+          }
+        }
+      }
+    }
+    
+    gen_reading_df <- data.frame(STD_VALUE, STD_EXPIRATION, STD_TYPE, STD_LOT, READING, TEMPERATURE, 
+                                DATETIME, TYPE, USED_FOR_RECAL, stringsAsFactors = FALSE)
+    
+    #If this is a previous entry that is being edited, add the ID columns 
+    if(!is.null(readings)) {
+      if(nrow(gen_reading_df) >= nrow(readings)) {
+        gen_reading_df <- gen_reading_df %>%
+          mutate(GEN_ID = check$GEN_ID[1],
+                 GENR_ID = readings$GENR_ID[1:nrow(gen_reading_df)])
+      } else {
+        gen_reading_df <- gen_reading_df %>%
+          mutate(GEN_ID = check$GEN_ID[1],
+                 GENR_ID = NA)
+        gen_reading_df$GENR_ID[1:nrow(gen_reading_df)] <- 
+          readings$GENR_ID[1:nrow(gen_reading_df)]
+      }
+      gen_reading_df <- select(gen_reading_df,
+                              GENR_ID, GEN_ID, STD_VALUE, STD_EXPIRATION, STD_TYPE, STD_LOT,
+                              READING, TEMPERATURE, DATETIME, TYPE, USED_FOR_RECAL)
+    }
+    
+    list_out <- list(GEN_CHECK = gen_check_df, GEN_READING = gen_reading_df)
+    
+  })
+  return(gen_check_list)
   
 }
